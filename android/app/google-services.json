@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "685968369147",
+    "project_id": "turfy-7e791",
+    "storage_bucket": "turfy-7e791.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685968369147:android:a71dfff6228074f7f1975e",
+        "android_client_info": {
+          "package_name": "com.pulsesoftware.turfy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "685968369147-hnevtjfr2gpg07leslhcmiefp181jvun.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulsesoftware.turfy",
+            "certificate_hash": "d3a0e7a4276e506e23a6b8cef98206177e7c16db"
+          }
+        },
+        {
+          "client_id": "685968369147-m46gv5a01fchlsoo8i8262818e8tm2qh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnoWJ77P32ZSnpVKf1tpeEPGPlVphFklY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "685968369147-m46gv5a01fchlsoo8i8262818e8tm2qh.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
