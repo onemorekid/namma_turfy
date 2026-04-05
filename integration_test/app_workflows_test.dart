@@ -61,6 +61,11 @@ class MockAuthRepository implements AuthRepository {
     _currentUser = null;
     _userController.add(null);
   }
+
+  @override
+  void dispose() {
+    _userController.close();
+  }
 }
 
 void main() {

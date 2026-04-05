@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
@@ -15,48 +17,80 @@ import 'package:namma_turfy/presentation/screens/splash_screen.dart';
 import 'package:namma_turfy/presentation/screens/suspended_screen.dart';
 import 'package:namma_turfy/presentation/screens/venue_details_screen.dart';
 import 'package:namma_turfy/presentation/screens/venue_list_screen.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'router.g.dart';
+/// Listens to [authStateChangesProvider] and notifies GoRouter to
+/// re-evaluate its redirect whenever the auth state changes.
+class _RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
 
-@riverpod
-GoRouter router(Ref ref) {
-  final authState = ref.watch(authStateChangesProvider);
+  _RouterNotifier(this._ref) {
+    // Whenever auth state emits a new value, tell GoRouter to re-run redirect.
+    _ref.listen<AsyncValue<dynamic>>(
+      authStateChangesProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
+
+  String? redirect(BuildContext context, GoRouterState state) {
+    final authState = _ref.read(authStateChangesProvider);
+
+    // Still loading — don't redirect yet.
+    if (authState.isLoading) return null;
+
+    final user = authState.value;
+    final loc = state.matchedLocation;
+
+    // Not logged in → always go to login.
+    if (user == null) {
+      return loc == '/login' ? null : '/login';
+    }
+
+    // Suspended account.
+    if (user.isSuspended) {
+      return loc == '/suspended' ? null : '/suspended';
+    }
+
+    // Profile not complete (phone number missing).
+    if (user.phoneNumber == null) {
+      return loc == '/profile-completion' ? null : '/profile-completion';
+    }
+
+    // Logged-in user trying to access auth-only screens → send home.
+    if (loc == '/login' ||
+        loc == '/splash' ||
+        loc == '/suspended' ||
+        loc == '/profile-completion') {
+      return '/';
+    }
+
+    return null;
+  }
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = _RouterNotifier(ref);
 
   return GoRouter(
     initialLocation: '/splash',
-    redirect: (context, state) {
-      if (authState.isLoading) return null;
-
-      final user = authState.value;
-      final isLoggingIn = state.matchedLocation == '/login';
-      final isSplash = state.matchedLocation == '/splash';
-
-      if (user == null) {
-        return isLoggingIn ? null : '/login';
-      }
-
-      if (user.isSuspended) {
-        return state.matchedLocation == '/suspended' ? null : '/suspended';
-      }
-
-      if (user.phoneNumber == null) {
-        return state.matchedLocation == '/profile-completion'
-            ? null
-            : '/profile-completion';
-      }
-
-      if (isLoggingIn || isSplash || state.matchedLocation == '/profile-completion' || state.matchedLocation == '/suspended') {
-        return '/';
-      }
-
-      return null;
-    },
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
     routes: [
-      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/suspended', builder: (context, state) => const SuspendedScreen()),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/suspended',
+        builder: (context, state) => const SuspendedScreen(),
+      ),
       GoRoute(
         path: '/profile-completion',
         builder: (context, state) => const ProfileCompletionScreen(),
@@ -91,6 +125,7 @@ GoRouter router(Ref ref) {
           return CheckoutScreen(
             venue: extra['venue'] as Venue,
             slots: extra['slots'] as List<Slot>,
+            lockedByUserId: extra['lockedByUserId'] as String,
           );
         },
       ),
@@ -107,4 +142,4 @@ GoRouter router(Ref ref) {
       ),
     ],
   );
-}
+});

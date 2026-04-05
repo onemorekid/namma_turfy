@@ -22,26 +22,8 @@ class AuthRepositoryImpl implements AuthRepository {
   StreamSubscription? _userDocSubscription;
   UserEntity? _currentUser;
 
-  // Set to true for automated testing sessions
-  static const bool _isTesting = true;
-
   AuthRepositoryImpl() {
-    if (_isTesting) {
-      _currentUser = const UserEntity(
-        id: 'mock_test_id',
-        email: 'mrpatilpralhad@gmail.com',
-        name: 'Test Pralhad',
-        roles: [UserRole.player, UserRole.owner, UserRole.admin],
-        activeRole: UserRole.player,
-        phoneNumber: '9876543210',
-      );
-      // Increased delay to ensure App is ready to receive the state
-      Future.delayed(const Duration(seconds: 2), () {
-        _userController.add(_currentUser);
-      });
-    } else {
-      _firebaseAuth.authStateChanges().listen(_onAuthStateChanged);
-    }
+    _firebaseAuth.authStateChanges().listen(_onAuthStateChanged);
   }
 
   void _onAuthStateChanged(User? firebaseUser) {
@@ -74,11 +56,6 @@ class AuthRepositoryImpl implements AuthRepository {
   UserEntity _mapInitialUser(User user) {
     final email = user.email ?? '';
     final roles = [UserRole.player];
-    if (email.contains('admin')) {
-      roles.addAll([UserRole.owner, UserRole.admin]);
-    } else if (email.contains('owner')) {
-      roles.add(UserRole.owner);
-    }
     return UserModel(
       id: user.uid,
       email: email,
@@ -176,10 +153,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  void dispose() {
+    _userDocSubscription?.cancel();
+    _userController.close();
+  }
+
+  @override
   Future<void> signOut() async {
     _userDocSubscription?.cancel();
+    _currentUser = null;
+    _userController.add(null);
     await _googleSignIn.signOut();
     await _firebaseAuth.signOut();
-    _currentUser = null;
   }
 }

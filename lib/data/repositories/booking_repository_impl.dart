@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:namma_turfy/data/models/booking_model.dart';
 import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
@@ -7,101 +8,86 @@ import 'package:namma_turfy/domain/repositories/booking_repository.dart';
 class BookingRepositoryImpl implements BookingRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  /// Lock slots for this user for 10 minutes.
+  /// A slot can only be locked if it is currently `available`.
   @override
-  Future<Booking> createBooking({
-    required String playerId,
-    required String venueId,
-    required String zoneId,
-    required List<Slot> slots,
-    required double totalPrice,
-    PaymentMethod paymentMethod = PaymentMethod.digital,
-  }) async {
+  Future<bool> lockSlots(List<Slot> slots, String userId) async {
+    debugPrint('[lockSlots] Started for user $userId, slots: ${slots.map((s) => s.id)}');
     try {
-      final docRef = _firestore.collection('bookings').doc();
+      await _firestore.runTransaction((tx) async {
+        final refs = slots
+            .map((s) => _firestore.collection('slots').doc(s.id))
+            .toList();
 
-      final booking = BookingModel(
-        id: docRef.id,
-        playerId: playerId,
-        venueId: venueId,
-        zoneId: zoneId,
-        slotIds: slots.map((s) => s.id).toList(),
-        date: slots.first.startTime,
-        createdAt: DateTime.now(),
-        totalPrice: totalPrice,
-        status: BookingStatus.confirmed,
-        paymentMethod: paymentMethod,
-      );
+        debugPrint('[lockSlots] Fetching ${refs.length} slot docs');
+        // Read all in one batch first (required before writes in transaction)
+        final docs = await Future.wait(refs.map((r) => tx.get(r)));
 
-      final batch = _firestore.batch();
-      batch.set(docRef, booking.toJson());
-
-      for (final slot in slots) {
-        final slotRef = _firestore.collection('slots').doc(slot.id);
-        batch.update(slotRef, {
-          'status': SlotStatus.booked.name,
-          'holdExpiry': null,
-        });
-      }
-
-      await batch.commit();
-      print('Booking created successfully: ${booking.id}');
-      return booking;
-    } catch (e) {
-      print('Error creating booking: $e');
-      rethrow;
-    }
-  }
-
-  @override
-  Future<bool> lockSlots(List<Slot> slots) async {
-    try {
-      await _firestore.runTransaction((transaction) async {
-        final slotDocs = <DocumentSnapshot>[];
-        for (final slot in slots) {
-          final ref = _firestore.collection('slots').doc(slot.id);
-          final doc = await transaction.get(ref);
-          if (!doc.exists) throw Exception('Slot does not exist: ${slot.id}');
-          slotDocs.add(doc);
-        }
-
-        for (final doc in slotDocs) {
+        for (final doc in docs) {
+          if (!doc.exists) {
+            debugPrint('[lockSlots] Slot ${doc.id} not found');
+            throw Exception('Slot not found: ${doc.id}');
+          }
           final data = doc.data() as Map<String, dynamic>;
-          if (data['status'] != 'available') {
-            throw Exception('One or more slots are no longer available.');
+          final status = data['status'] as String? ?? 'available';
+          if (status != 'available') {
+            debugPrint('[lockSlots] Slot ${doc.id} is $status, not available');
+            throw Exception('Slot ${doc.id} is no longer available');
           }
         }
 
-        final expiry = DateTime.now().add(const Duration(minutes: 5));
-        for (final slot in slots) {
-          final ref = _firestore.collection('slots').doc(slot.id);
-          transaction.update(ref, {
+        final expiry = DateTime.now().add(const Duration(minutes: 10));
+        debugPrint('[lockSlots] Updating slots to locked status');
+        for (final ref in refs) {
+          tx.update(ref, {
             'status': SlotStatus.locked.name,
+            'lockedBy': userId,
             'holdExpiry': expiry.toIso8601String(),
           });
         }
       });
+      debugPrint('[lockSlots] Transaction committed successfully');
       return true;
     } catch (e) {
-      print('Error locking slots: $e');
+      debugPrint('[lockSlots] Transaction failed: $e');
+      return false;
+    }
+  }
+
+  /// Verify that [userId] still holds active (non-expired) locks on all slots.
+  @override
+  Future<bool> verifyLocks(List<Slot> slots, String userId) async {
+    try {
+      final now = DateTime.now();
+      for (final slot in slots) {
+        final doc =
+            await _firestore.collection('slots').doc(slot.id).get();
+        if (!doc.exists) return false;
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['status'] != 'locked') return false;
+        if (data['lockedBy'] != userId) return false;
+        final expiryRaw = data['holdExpiry'];
+        if (expiryRaw == null) return false;
+        final expiry = expiryRaw is Timestamp
+            ? expiryRaw.toDate()
+            : DateTime.parse(expiryRaw as String);
+        if (expiry.isBefore(now)) return false;
+      }
+      return true;
+    } catch (e) {
       return false;
     }
   }
 
   @override
   Stream<List<Booking>> watchPlayerBookings(String playerId) {
-    print('Watching bookings for player: $playerId');
     return _firestore
         .collection('bookings')
         .where('playerId', isEqualTo: playerId)
+        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-      (snapshot) {
-        print('Received ${snapshot.docs.length} bookings for player $playerId');
-        return snapshot.docs
-            .map((doc) => BookingModel.fromSnapshot(doc))
-            .toList();
-      },
-    );
+        .map((s) =>
+            s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
   }
 
   @override
@@ -111,11 +97,8 @@ class BookingRepositoryImpl implements BookingRepository {
         .where('venueId', isEqualTo: venueId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => BookingModel.fromSnapshot(doc))
-              .toList(),
-        );
+        .map((s) =>
+            s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
   }
 
   @override

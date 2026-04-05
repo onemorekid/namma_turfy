@@ -14,4 +14,5 @@ abstract class AuthRepository {
   Future<void> updateUser(UserEntity user);
   Stream<List<UserEntity>> watchAllUsers();
   Future<void> signOut();
+  void dispose();
 }

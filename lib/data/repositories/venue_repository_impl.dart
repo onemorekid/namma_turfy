@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:namma_turfy/data/models/venue_model.dart';
 import 'package:namma_turfy/data/models/zone_model.dart';
 import 'package:namma_turfy/data/models/slot_model.dart';
@@ -13,8 +14,12 @@ class VenueRepositoryImpl implements VenueRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
-  Stream<List<Venue>> watchAllVenues() {
-    return _firestore.collection('venues').snapshots().map((snapshot) {
+  Stream<List<Venue>> watchAllVenues({String? city}) {
+    Query query = _firestore.collection('venues');
+    if (city != null && city.isNotEmpty) {
+      query = query.where('city', isEqualTo: city);
+    }
+    return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => VenueModel.fromSnapshot(doc)).toList();
     });
   }
@@ -57,12 +62,22 @@ class VenueRepositoryImpl implements VenueRepository {
   }
 
   @override
+  Stream<List<Venue>> watchVenuesByOwner(String ownerId) {
+    return _firestore
+        .collection('venues')
+        .where('ownerId', isEqualTo: ownerId)
+        .snapshots()
+        .map((s) => s.docs.map((d) => VenueModel.fromSnapshot(d)).toList());
+  }
+
+  @override
   Future<void> saveVenue(Venue venue) async {
     final model = VenueModel(
       id: venue.id,
       ownerId: venue.ownerId,
       name: venue.name,
       location: venue.location,
+      city: venue.city,
       latitude: venue.latitude,
       longitude: venue.longitude,
       type: venue.type,
@@ -75,6 +90,11 @@ class VenueRepositoryImpl implements VenueRepository {
       availableHours: venue.availableHours,
       isSuspended: venue.isSuspended,
       commissionRate: venue.commissionRate,
+      ownerBankAccountNumber: venue.ownerBankAccountNumber,
+      ownerBankIfsc: venue.ownerBankIfsc,
+      ownerBankName: venue.ownerBankName,
+      razorpayContactId: venue.razorpayContactId,
+      razorpayFundAccountId: venue.razorpayFundAccountId,
     );
     await _firestore
         .collection('venues')
@@ -96,7 +116,7 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveZone(Zone zone) async {
-    print('Saving zone: ${zone.id} - ${zone.name}');
+    debugPrint('Saving zone: ${zone.id} - ${zone.name}');
     final model = ZoneModel(
       id: zone.id,
       venueId: zone.venueId,
@@ -107,18 +127,18 @@ class VenueRepositoryImpl implements VenueRepository {
         .collection('zones')
         .doc(zone.id)
         .set(model.toJson(), SetOptions(merge: true));
-    print('Zone saved successfully');
+    debugPrint('Zone saved successfully');
   }
 
   @override
   Stream<List<Slot>> watchSlots(String zoneId, {DateTime? date}) {
-    print('Watching slots for zone: $zoneId, date: $date');
+    debugPrint('Watching slots for zone: $zoneId, date: $date');
     Query query = _firestore.collection('slots').where('zoneId', isEqualTo: zoneId);
 
     if (date != null) {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
-      print('Filter range: $startOfDay to $endOfDay');
+      debugPrint('Filter range: $startOfDay to $endOfDay');
       query = query
           .where('startTime', isGreaterThanOrEqualTo: startOfDay.toIso8601String())
           .where('startTime', isLessThanOrEqualTo: endOfDay.toIso8601String());
@@ -126,7 +146,7 @@ class VenueRepositoryImpl implements VenueRepository {
 
     return query.snapshots().map(
           (snapshot) {
-            print('Received ${snapshot.docs.length} slots from Firestore');
+            debugPrint('Received ${snapshot.docs.length} slots from Firestore');
             return snapshot.docs.map((doc) => SlotModel.fromSnapshot(doc)).toList();
           },
         );
@@ -134,7 +154,7 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveSlot(Slot slot) async {
-    print('Saving slot: ${slot.id} for zone: ${slot.zoneId} at ${slot.startTime}');
+    debugPrint('Saving slot: ${slot.id} for zone: ${slot.zoneId} at ${slot.startTime}');
     final model = SlotModel(
       id: slot.id,
       zoneId: slot.zoneId,
@@ -148,7 +168,7 @@ class VenueRepositoryImpl implements VenueRepository {
         .collection('slots')
         .doc(slot.id)
         .set(model.toJson(), SetOptions(merge: true));
-    print('Slot saved successfully');
+    debugPrint('Slot saved successfully');
   }
 
   @override

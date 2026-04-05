@@ -121,15 +121,9 @@ class AppDrawer extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
-            onTap: () => ref.read(authRepositoryProvider).signOut(),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.bug_report, color: Colors.orange),
-            title: const Text('Become Admin (Dev Only)'),
             onTap: () {
-              ref.read(authRepositoryProvider).addRole(UserRole.admin);
               Navigator.pop(context);
+              ref.read(authRepositoryProvider).signOut();
             },
           ),
         ],

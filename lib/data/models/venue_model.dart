@@ -7,6 +7,7 @@ class VenueModel extends Venue {
     required super.ownerId,
     required super.name,
     required super.location,
+    required super.city,
     required super.latitude,
     required super.longitude,
     required super.type,
@@ -19,6 +20,11 @@ class VenueModel extends Venue {
     super.availableHours,
     super.isSuspended,
     super.commissionRate,
+    super.ownerBankAccountNumber,
+    super.ownerBankIfsc,
+    super.ownerBankName,
+    super.razorpayContactId,
+    super.razorpayFundAccountId,
   });
 
   factory VenueModel.fromJson(Map<String, dynamic> json) {
@@ -27,6 +33,7 @@ class VenueModel extends Venue {
       ownerId: json['ownerId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       location: json['location'] as String? ?? '',
+      city: json['city'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       type: json['type'] as String? ?? 'Cricket',
@@ -39,6 +46,11 @@ class VenueModel extends Venue {
       availableHours: (json['availableHours'] as List?)?.cast<String>() ?? [],
       isSuspended: json['isSuspended'] as bool? ?? false,
       commissionRate: (json['commissionRate'] as num?)?.toInt() ?? 5,
+      ownerBankAccountNumber: json['ownerBankAccountNumber'] as String?,
+      ownerBankIfsc: json['ownerBankIfsc'] as String?,
+      ownerBankName: json['ownerBankName'] as String?,
+      razorpayContactId: json['razorpayContactId'] as String?,
+      razorpayFundAccountId: json['razorpayFundAccountId'] as String?,
     );
   }
 
@@ -53,6 +65,7 @@ class VenueModel extends Venue {
     'ownerId': ownerId,
     'name': name,
     'location': location,
+    'city': city,
     'latitude': latitude,
     'longitude': longitude,
     'type': type,
@@ -65,5 +78,12 @@ class VenueModel extends Venue {
     'availableHours': availableHours,
     'isSuspended': isSuspended,
     'commissionRate': commissionRate,
+    if (ownerBankAccountNumber != null)
+      'ownerBankAccountNumber': ownerBankAccountNumber,
+    if (ownerBankIfsc != null) 'ownerBankIfsc': ownerBankIfsc,
+    if (ownerBankName != null) 'ownerBankName': ownerBankName,
+    if (razorpayContactId != null) 'razorpayContactId': razorpayContactId,
+    if (razorpayFundAccountId != null)
+      'razorpayFundAccountId': razorpayFundAccountId,
   };
 }

@@ -134,6 +134,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                 ownerId: ownerId,
                 name: nameController.text,
                 location: locationController.text,
+                city: 'Vijayapura',
                 latitude: 17.3297,
                 longitude: 75.7181,
                 type: 'Cricket',
@@ -322,7 +323,8 @@ class _ZoneItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final slotsAsync = ref.watch(zoneSlotsProvider(zone.id));
+    final selectedDate = ref.watch(ownerSelectedDateProvider);
+    final slotsAsync = ref.watch(zoneSlotsFamily((zoneId: zone.id, date: selectedDate)));
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -346,7 +348,6 @@ class _ZoneItem extends ConsumerWidget {
                 ElevatedButton.icon(
                   onPressed: () {
                     final selectedDate = ref.read(ownerSelectedDateProvider);
-                    print('Manual add clicked. Selected date: $selectedDate');
                     final now = DateTime.now();
                     final startTime = DateTime(
                       selectedDate.year,
@@ -355,7 +356,6 @@ class _ZoneItem extends ConsumerWidget {
                       now.hour,
                       now.minute,
                     );
-                    print('Calculated start time: $startTime');
                     final newSlot = Slot(
                       id: 'slot_${zone.id}_${startTime.millisecondsSinceEpoch}',
                       zoneId: zone.id,

@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && role in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isVenueOwner(venueId) {
+      return isSignedIn() && get(/databases/$(database)/documents/venues/$(venueId)).data.ownerId == request.auth.uid;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+
+    // Venues collection
+    match /venues/{venueId} {
+      allow read: if true;
+      allow write: if isAdmin() || (isSignedIn() && (resource == null || request.resource.data.ownerId == request.auth.uid));
+    }
+
+    // Zones collection
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin() || (isSignedIn() && isVenueOwner(request.resource.data.venueId));
+    }
+
+    // Slots collection
+    match /slots/{slotId} {
+      allow read: if true;
+      
+      allow update: if isSignedIn() && 
+        (
+          // Players locking slots (must specify lockedBy as themselves)
+          (request.resource.data.status == 'locked' && resource.data.status == 'available' && request.resource.data.lockedBy == request.auth.uid) ||
+          // Players releasing their own lock
+          (request.resource.data.status == 'available' && resource.data.lockedBy == request.auth.uid) ||
+          // Admin/Owner overrides
+          isAdmin() || isVenueOwner(get(/databases/$(database)/documents/zones/$(resource.data.zoneId)).data.venueId)
+        );
+      
+      allow create, delete: if isAdmin() || (isSignedIn() && hasRole('vendor'));
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && (resource.data.playerId == request.auth.uid || isVenueOwner(resource.data.venueId) || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.playerId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // Coupons collection
+    match /coupons/{couponId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || (isSignedIn() && hasRole('vendor') && (resource == null || request.resource.data.ownerId == request.auth.uid));
+    }
+
+    // Sport Events collection
+    match /sport_events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || (resource.data.creatorId == request.auth.uid);
+    }
+  }
+}

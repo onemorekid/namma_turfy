@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:namma_turfy/core/services/location_service.dart';
 import 'package:namma_turfy/core/utils/proximity_helper.dart';
+import 'package:namma_turfy/domain/entities/user.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/discovery_providers.dart';
@@ -72,10 +73,16 @@ class HomeScreen extends ConsumerWidget {
                   ref.read(searchQueryProvider.notifier).value = val,
             ),
           ),
-          _CategoryFilter(selectedCategory: selectedCategory),
           Expanded(
             child: venuesAsync.when(
               data: (venues) {
+                // Derive categories dynamically from data
+                final allSports = {'All', ...venues.expand((v) => v.sportsTypes)};
+                final categories = [
+                  'All',
+                  ...allSports.where((s) => s != 'All').toList()..sort(),
+                ];
+
                 var filtered = venues.where((v) => !v.isSuspended).toList();
 
                 if (selectedCategory != 'All') {
@@ -98,6 +105,15 @@ class HomeScreen extends ConsumerWidget {
                       .toList();
                 }
 
+                if (selectedHour != null) {
+                  filtered = filtered.where((v) {
+                    if (v.availableHours.length < 2) return true;
+                    final openHour = int.tryParse(v.availableHours.first.split(':').first) ?? 6;
+                    final closeHour = int.tryParse(v.availableHours.last.split(':').first) ?? 22;
+                    return selectedHour >= openHour && selectedHour < closeHour;
+                  }).toList();
+                }
+
                 if (userPos != null) {
                   filtered.sort((a, b) {
                     final distA = ProximityHelper.calculateDistance(
@@ -116,28 +132,36 @@ class HomeScreen extends ConsumerWidget {
                   });
                 }
 
-                if (filtered.isEmpty) {
-                  return const Center(
-                    child: Text('No venues found. Try adjusting filters.'),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final venue = filtered[index];
-                    double? distance;
-                    if (userPos != null) {
-                      distance = ProximityHelper.calculateDistance(
-                        userPos.latitude,
-                        userPos.longitude,
-                        venue.latitude,
-                        venue.longitude,
-                      );
-                    }
-                    return _VenueCard(venue: venue, distance: distance);
-                  },
+                return Column(
+                  children: [
+                    _CategoryFilter(
+                      categories: categories,
+                      selectedCategory: selectedCategory,
+                    ),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(
+                              child: Text('No venues found. Try adjusting filters.'),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final venue = filtered[index];
+                                double? distance;
+                                if (userPos != null) {
+                                  distance = ProximityHelper.calculateDistance(
+                                    userPos.latitude,
+                                    userPos.longitude,
+                                    venue.latitude,
+                                    venue.longitude,
+                                  );
+                                }
+                                return _VenueCard(venue: venue, distance: distance);
+                              },
+                            ),
+                    ),
+                  ],
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -187,12 +211,12 @@ class _TimeDiscovery extends ConsumerWidget {
 }
 
 class _CategoryFilter extends ConsumerWidget {
+  final List<String> categories;
   final String selectedCategory;
-  const _CategoryFilter({required this.selectedCategory});
+  const _CategoryFilter({required this.categories, required this.selectedCategory});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final categories = ['All', 'Cricket', 'Football', 'Badminton'];
     return SizedBox(
       height: 50,
       child: ListView.builder(
@@ -217,13 +241,13 @@ class _CategoryFilter extends ConsumerWidget {
 }
 
 class _CityPicker extends ConsumerWidget {
-  final dynamic user;
+  final UserEntity? user;
   const _CityPicker({required this.user});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cities = ['Vijayapura', 'Bagalakote', 'Kalaburagi'];
-    final selectedCity = user?.preferredCity as String?;
+    final selectedCity = user?.preferredCity;
 
     return InkWell(
       onTap: () {
@@ -283,10 +307,6 @@ class _VenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = venue.images.isNotEmpty
-        ? venue.images.first
-        : 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop';
-
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       clipBehavior: Clip.antiAlias,
@@ -295,16 +315,31 @@ class _VenueCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (context, url) =>
-                  const Center(child: CircularProgressIndicator()),
-              errorWidget: (context, url, error) =>
-                  const Icon(Icons.image_not_supported, size: 60),
-            ),
+            if (venue.images.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: venue.images.first,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  height: 180,
+                  color: Colors.grey[100],
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  height: 180,
+                  color: Colors.grey[200],
+                  child: const Icon(Icons.image_not_supported, size: 60),
+                ),
+              )
+            else
+              Container(
+                height: 180,
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Icon(Icons.stadium, size: 60, color: Colors.grey),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(

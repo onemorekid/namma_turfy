@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.runtimeconfig.json
+
+# Node.js (Functions)
+functions/node_modules/
+functions/lib/
+functions/npm-debug.log

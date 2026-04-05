@@ -5,20 +5,107 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
+import 'package:namma_turfy/presentation/providers/auth_providers.dart';
+import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_detail_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
 
-class VenueDetailsScreen extends ConsumerWidget {
+class VenueDetailsScreen extends ConsumerStatefulWidget {
   final String venueId;
   const VenueDetailsScreen({super.key, required this.venueId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final venueAsync = ref.watch(venueProvider(venueId));
-    final zonesAsync = ref.watch(venueZonesProvider(venueId));
+  ConsumerState<VenueDetailsScreen> createState() => _VenueDetailsScreenState();
+}
+
+class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
+  bool _isLocking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset selection when entering a new venue to avoid Issue #8
+    Future.microtask(() {
+      ref.read(selectedSlotsProvider.notifier).value = [];
+      ref.read(selectedZoneIdProvider.notifier).value = null;
+    });
+  }
+
+  /// Called when player taps "Book Now".
+  /// Locks all selected slots immediately (10-min hold), then navigates to checkout.
+  Future<void> _onBookNow() async {
+    debugPrint('[_onBookNow] Started');
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      debugPrint('[_onBookNow] User is null');
+      return;
+    }
+
+    final selectedSlots = ref.read(selectedSlotsProvider);
+    final venue = ref.read(venueProvider(widget.venueId)).value;
+    
+    debugPrint('[_onBookNow] selectedSlots count: ${selectedSlots.length}');
+    debugPrint('[_onBookNow] venue is null: ${venue == null}');
+    
+    if (selectedSlots.isEmpty || venue == null) {
+      debugPrint('[_onBookNow] Returning early: empty slots or null venue');
+      return;
+    }
+
+    setState(() => _isLocking = true);
+    debugPrint('[_onBookNow] Calling lockSlots for user: ${user.id}');
+
+    final locked = await ref
+        .read(bookingRepositoryProvider)
+        .lockSlots(selectedSlots, user.id);
+
+    debugPrint('[_onBookNow] lockSlots result: $locked');
+
+    if (!mounted) {
+      debugPrint('[_onBookNow] Not mounted after lockSlots');
+      return;
+    }
+    setState(() => _isLocking = false);
+
+    if (!locked) {
+      debugPrint('[_onBookNow] Lock failed, showing snackbar');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              'One or more slots were just taken. Please reselect.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      // Clear selection so player picks again
+      ref.read(selectedSlotsProvider.notifier).value = [];
+      return;
+    }
+
+    debugPrint('[_onBookNow] Navigating to checkout');
+    context.push('/checkout', extra: {
+      'venue': venue,
+      'slots': selectedSlots,
+      'lockedByUserId': user.id,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final venueAsync = ref.watch(venueProvider(widget.venueId));
+    final zonesAsync = ref.watch(venueZonesProvider(widget.venueId));
     final selectedDate = ref.watch(selectedDateProvider);
     final selectedZoneId = ref.watch(selectedZoneIdProvider);
     final selectedSlots = ref.watch(selectedSlotsProvider);
+    final user = ref.watch(currentUserProvider);
+
+    debugPrint('[VenueDetailsScreen] build: user=${user?.id}, slots=${selectedSlots.length}, isLocking=$_isLocking');
+    ref.listen(venueZonesProvider(widget.venueId), (prev, next) {
+      next.whenData((zones) {
+        if (ref.read(selectedZoneIdProvider) == null && zones.isNotEmpty) {
+          ref.read(selectedZoneIdProvider.notifier).value = zones.first.id;
+        }
+      });
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text('Venue Details')),
@@ -133,12 +220,6 @@ class VenueDetailsScreen extends ConsumerWidget {
               zonesAsync.when(
                 data: (zones) {
                   if (zones.isEmpty) return const SizedBox.shrink();
-                  Future.microtask(() {
-                    if (selectedZoneId == null && zones.isNotEmpty) {
-                      ref.read(selectedZoneIdProvider.notifier).value =
-                          zones.first.id;
-                    }
-                  });
                   return _ZoneSelector(
                     zones: zones,
                     selectedZoneId: selectedZoneId,
@@ -165,13 +246,8 @@ class VenueDetailsScreen extends ConsumerWidget {
       ),
       bottomNavigationBar: _StickyFooter(
         selectedSlots: selectedSlots,
-        onBook: () {
-          if (venueAsync.value == null) return;
-          context.push(
-            '/checkout',
-            extra: {'venue': venueAsync.value!, 'slots': selectedSlots},
-          );
-        },
+        isLocking: _isLocking,
+        onBook: _onBookNow,
       ),
     );
   }
@@ -277,16 +353,12 @@ class _SlotGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final slotsAsync = ref.watch(playerZoneSlotsProvider(zoneId));
-    final selectedSlots = ref.watch(selectedSlotsProvider);
     final selectedDate = ref.watch(selectedDateProvider);
+    final slotsAsync = ref.watch(zoneSlotsFamily((zoneId: zoneId, date: selectedDate)));
+    final selectedSlots = ref.watch(selectedSlotsProvider);
 
     return slotsAsync.when(
-      data: (allSlots) {
-        final slots = allSlots
-            .where((s) => DateUtils.isSameDay(s.startTime, selectedDate))
-            .toList();
-
+      data: (slots) {
         if (slots.isEmpty) {
           return const Center(child: Text('No slots available for this date.'));
         }
@@ -365,8 +437,13 @@ class _SlotGrid extends ConsumerWidget {
 
 class _StickyFooter extends StatelessWidget {
   final List<Slot> selectedSlots;
+  final bool isLocking;
   final VoidCallback onBook;
-  const _StickyFooter({required this.selectedSlots, required this.onBook});
+  const _StickyFooter({
+    required this.selectedSlots,
+    required this.isLocking,
+    required this.onBook,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +484,7 @@ class _StickyFooter extends StatelessWidget {
             ),
             const Spacer(),
             ElevatedButton(
-              onPressed: onBook,
+              onPressed: isLocking ? null : onBook,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
@@ -416,7 +493,14 @@ class _StickyFooter extends StatelessWidget {
                   vertical: 14,
                 ),
               ),
-              child: const Text('Book Now'),
+              child: isLocking
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Book Now'),
             ),
           ],
         ),

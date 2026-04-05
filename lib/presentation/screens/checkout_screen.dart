@@ -1,51 +1,89 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:namma_turfy/core/services/payment_service.dart';
-import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   final Venue venue;
   final List<Slot> slots;
+  final String lockedByUserId;
 
-  const CheckoutScreen({super.key, required this.venue, required this.slots});
+  const CheckoutScreen({
+    super.key,
+    required this.venue,
+    required this.slots,
+    required this.lockedByUserId,
+  });
 
   @override
   ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
-  PaymentMethod _paymentMethod = PaymentMethod.digital;
   final _promoController = TextEditingController();
+  late final Razorpay _razorpay;
+
   double _discount = 0.0;
   bool _isProcessing = false;
+  String? _appliedCouponCode;
+
+  // Filled once createOrder succeeds, needed for verifyAndBook
+  String? _pendingOrderId;
 
   @override
-  void dispose() {
-    _promoController.dispose();
-    super.dispose();
-  }
-
-  void _showError(String message) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
+  void initState() {
+    super.initState();
+    debugPrint('[CheckoutScreen] initState: Initializing Razorpay');
+    try {
+      _razorpay = Razorpay();
+      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
+      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
+      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+      debugPrint('[CheckoutScreen] initState: Razorpay initialized');
+    } catch (e) {
+      debugPrint(
+        '[CheckoutScreen] initState: Razorpay initialization failed: $e',
       );
     }
   }
 
-  Future<void> _applyPromo(double subtotal) async {
-    if (_promoController.text.isEmpty) return;
+  @override
+  void dispose() {
+    _razorpay.clear();
+    _promoController.dispose();
+    super.dispose();
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+  }
+
+  double get _subtotal => widget.slots.fold(0.0, (sum, s) => sum + s.price);
+
+  double get _total => (_subtotal - _discount).clamp(0.0, double.infinity);
+
+  // ── Coupon ───────────────────────────────────────────────────────────────
+
+  Future<void> _applyPromo() async {
+    final code = _promoController.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+
     final coupon = await ref
         .read(venueRepositoryProvider)
-        .getCouponByCode(_promoController.text.trim().toUpperCase());
+        .getCouponByCode(code);
 
     if (coupon == null) {
       _showError('Invalid coupon code');
@@ -55,6 +93,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       _showError('Coupon has expired');
       return;
     }
+
     if (coupon.restrictedEmails != null &&
         coupon.restrictedEmails!.isNotEmpty) {
       final user = ref.read(currentUserProvider);
@@ -66,74 +105,150 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
     if (!mounted) return;
     setState(() {
-      if (coupon.discountType == DiscountType.percentage) {
-        _discount = subtotal * (coupon.discountValue / 100);
-      } else {
-        _discount = coupon.discountValue;
-      }
+      _discount = coupon.discountType == DiscountType.percentage
+          ? _subtotal * (coupon.discountValue / 100)
+          : coupon.discountValue;
+      _appliedCouponCode = code;
     });
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Coupon applied!')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Coupon $code applied!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
-  Future<void> _confirmBooking(double total) async {
+  // ── Razorpay flow ────────────────────────────────────────────────────────
+
+  /// Step 1: Verify locks still valid → create server-side Razorpay order.
+  Future<void> _startPayment() async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
     setState(() => _isProcessing = true);
 
-    // 1. Lock slots (concurrency guard)
-    final locked = await ref
+    // 1a. Verify locks are still held by this user (haven't expired)
+    final locksValid = await ref
         .read(bookingRepositoryProvider)
-        .lockSlots(widget.slots);
-    if (!locked) {
+        .verifyLocks(widget.slots, widget.lockedByUserId);
+
+    if (!locksValid) {
       if (!mounted) return;
+      setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('One or more slots just got booked. Please try again.'),
+          content: Text(
+            'Your slot hold expired (10 min limit). Please select slots again.',
+          ),
+          backgroundColor: Colors.orange,
         ),
       );
-      context.pop();
+      context.go('/venue/${widget.venue.id}');
       return;
     }
 
-    // 2. Process payment
-    bool paymentSuccess = true;
-    if (_paymentMethod == PaymentMethod.digital) {
-      paymentSuccess = await ref
-          .read(paymentServiceProvider)
-          .processPayment(
-            amount: total,
-            name: user.name,
-            email: user.email,
-            description: 'Booking at ${widget.venue.name}',
-          );
-    }
+    // 1b. Call createOrder Cloud Function
+    try {
+      final functions = FirebaseFunctions.instance;
+      final result = await functions.httpsCallable('createOrder').call({
+        'slotIds': widget.slots.map((s) => s.id).toList(),
+        'venueId': widget.venue.id,
+        'playerId': user.id,
+        if (_appliedCouponCode != null) 'couponCode': _appliedCouponCode,
+      });
 
-    if (paymentSuccess) {
-      final booking = await ref
-          .read(bookingRepositoryProvider)
-          .createBooking(
-            playerId: user.id,
-            venueId: widget.venue.id,
-            zoneId: widget.slots.first.zoneId,
-            slots: widget.slots,
-            totalPrice: total,
-            paymentMethod: _paymentMethod,
-          );
-      if (!mounted) return;
-      context.go('/receipt/${booking.id}');
-    } else {
+      final data = Map<String, dynamic>.from(result.data as Map);
+      _pendingOrderId = data['orderId'] as String;
+
+      // 1c. Open Razorpay SDK
+      _razorpay.open({
+        'key': data['keyId'],
+        'order_id': _pendingOrderId,
+        'amount': data['amount'],
+        'currency': data['currency'],
+        'name': 'Namma Turfy',
+        'description': 'Booking at ${widget.venue.name}',
+        'prefill': {
+          'email': user.email,
+          'contact': user.phoneNumber ?? '',
+          'name': user.name,
+        },
+        'theme': {'color': '#35CA67'},
+      });
+    } catch (e) {
+      debugPrint('[CheckoutScreen] createOrder error: $e');
       if (!mounted) return;
       setState(() => _isProcessing = false);
+
+      String errorMsg = 'Could not create payment order. Please try again.';
+      if (e is FirebaseFunctionsException) {
+        errorMsg = e.message ?? errorMsg;
+      }
+      _showError(errorMsg);
     }
   }
 
+  /// Step 2: Payment succeeded — call verifyAndBook Cloud Function.
+  void _onPaymentSuccess(PaymentSuccessResponse response) async {
+    final user = ref.read(currentUserProvider);
+    if (user == null || _pendingOrderId == null) return;
+
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('verifyAndBook')
+          .call({
+            'razorpayOrderId': _pendingOrderId,
+            'razorpayPaymentId': response.paymentId,
+            'razorpaySignature': response.signature,
+            'playerId': user.id,
+            'venueId': widget.venue.id,
+            'zoneId': widget.slots.first.zoneId,
+            'slotIds': widget.slots.map((s) => s.id).toList(),
+            if (_appliedCouponCode != null) 'couponCode': _appliedCouponCode,
+          });
+
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final bookingId = data['bookingId'] as String;
+
+      if (!mounted) return;
+      context.go('/receipt/$bookingId');
+    } catch (e) {
+      debugPrint('[CheckoutScreen] verifyAndBook error: $e');
+      if (!mounted) return;
+      setState(() => _isProcessing = false);
+
+      String errorMsg =
+          'Payment received but booking failed. Contact support with payment ID: ${response.paymentId}';
+      if (e is FirebaseFunctionsException) {
+        errorMsg = '${e.message} (Payment ID: ${response.paymentId})';
+      }
+      _showError(errorMsg);
+    }
+  }
+
+  void _onPaymentError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+    _showError('Payment failed: ${response.message ?? "Unknown error"}');
+  }
+
+  void _onExternalWallet(ExternalWalletResponse response) {
+    if (!mounted) return;
+    setState(() => _isProcessing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('External wallet selected: ${response.walletName}'),
+      ),
+    );
+  }
+
+  // ── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final subtotal = widget.slots.fold(0.0, (sum, s) => sum + s.price);
-    final total = (subtotal - _discount).clamp(0.0, double.infinity);
+    final commission = double.parse(
+      (_total * widget.venue.commissionRate / 100).toStringAsFixed(2),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
@@ -142,6 +257,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Booking Summary ──────────────────────────────────────────
             Text(
               'Booking Summary',
               style: Theme.of(
@@ -176,23 +292,48 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     const Divider(),
                     _SummaryRow(
                       label: 'Subtotal',
-                      value: '₹${subtotal.toStringAsFixed(0)}',
+                      value: '₹${_subtotal.toStringAsFixed(0)}',
                     ),
                     if (_discount > 0)
                       _SummaryRow(
-                        label: 'Discount',
+                        label: 'Coupon ($_appliedCouponCode)',
                         value: '- ₹${_discount.toStringAsFixed(0)}',
                         color: Colors.green,
                       ),
                     _SummaryRow(
                       label: 'Total Payable',
-                      value: '₹${total.toStringAsFixed(0)}',
+                      value: '₹${_total.toStringAsFixed(0)}',
                       isBold: true,
                     ),
                   ],
                 ),
               ),
             ),
+
+            // ── Slot hold timer notice ───────────────────────────────────
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.lock_clock, color: Colors.orange, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Slots are held for 10 minutes. Complete payment before time runs out.',
+                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Promo Code ───────────────────────────────────────────────
             const SizedBox(height: 24),
             const Text(
               'Promo Code',
@@ -205,46 +346,58 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   child: TextField(
                     controller: _promoController,
                     textCapitalization: TextCapitalization.characters,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter code (e.g. TURFY20)',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
+                    enabled: _appliedCouponCode == null,
+                    decoration: InputDecoration(
+                      hintText: 'Enter code (e.g. SAVE20)',
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 14,
                       ),
+                      suffixIcon: _appliedCouponCode != null
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: () => _applyPromo(subtotal),
+                  onPressed: _appliedCouponCode != null ? null : _applyPromo,
                   child: const Text('Apply'),
                 ),
               ],
             ),
+
+            // ── Commission disclosure (transparent) ──────────────────────
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Platform fee (${widget.venue.commissionRate}%)',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                  Text(
+                    '₹${commission.toStringAsFixed(0)}',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 32),
-            const Text(
-              'Payment Method',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            _PaymentOption(
-              label: 'Pay Online (Digital)',
-              icon: Icons.payment,
-              isSelected: _paymentMethod == PaymentMethod.digital,
-              onTap: () =>
-                  setState(() => _paymentMethod = PaymentMethod.digital),
-            ),
-            _PaymentOption(
-              label: 'Pay at Venue (Cash)',
-              icon: Icons.payments_outlined,
-              isSelected: _paymentMethod == PaymentMethod.payAtVenue,
-              onTap: () =>
-                  setState(() => _paymentMethod = PaymentMethod.payAtVenue),
-            ),
           ],
         ),
       ),
+
+      // ── Pay Button ───────────────────────────────────────────────────────
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -259,7 +412,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         ),
         child: SafeArea(
           child: ElevatedButton(
-            onPressed: _isProcessing ? null : () => _confirmBooking(total),
+            onPressed: _isProcessing ? null : _startPayment,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 56),
               backgroundColor: const Color(0xFF35CA67),
@@ -274,9 +427,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                   )
                 : Text(
-                    _paymentMethod == PaymentMethod.digital
-                        ? 'Pay ₹${total.toStringAsFixed(0)}'
-                        : 'Confirm Booking (Pay ₹${total.toStringAsFixed(0)} at Venue)',
+                    'Pay ₹${_total.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
           ),
         ),
@@ -284,6 +439,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 }
+
+// ── Shared widgets ────────────────────────────────────────────────────────────
 
 class _SummaryRow extends StatelessWidget {
   final String label;
@@ -324,58 +481,6 @@ class _SummaryRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PaymentOption extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _PaymentOption({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? const Color(0xFF35CA67) : Colors.grey[300]!,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF35CA67) : Colors.grey,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? const Color(0xFF35CA67) : Colors.black,
-              ),
-            ),
-            const Spacer(),
-            if (isSelected)
-              const Icon(Icons.check_circle, color: Color(0xFF35CA67)),
-          ],
-        ),
       ),
     );
   }

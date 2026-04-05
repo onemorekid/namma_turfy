@@ -10,6 +10,7 @@ class SlotModel extends Slot {
     required super.price,
     required super.status,
     super.holdExpiry,
+    super.lockedBy,
   });
 
   factory SlotModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +24,7 @@ class SlotModel extends Slot {
       holdExpiry: json['holdExpiry'] != null
           ? _parseDateTime(json['holdExpiry'])
           : null,
+      lockedBy: json['lockedBy'] as String?,
     );
   }
 
@@ -43,6 +45,7 @@ class SlotModel extends Slot {
     'price': price,
     'status': status.name,
     if (holdExpiry != null) 'holdExpiry': holdExpiry!.toIso8601String(),
+    if (lockedBy != null) 'lockedBy': lockedBy,
   };
 
   static void _convertTimestamp(Map<String, dynamic> data, String key) {

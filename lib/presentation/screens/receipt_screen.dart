@@ -57,7 +57,7 @@ class ReceiptScreen extends ConsumerWidget {
                     ),
                     padding: const EdgeInsets.all(16),
                     child: QrImageView(
-                      data: booking.id,
+                      data: 'https://nammaturfy.web.app/verify/${booking.id}',
                       version: QrVersions.auto,
                       size: 220,
                       backgroundColor: Colors.white,
@@ -86,12 +86,9 @@ class ReceiptScreen extends ConsumerWidget {
                           ),
                           _ReceiptRow(
                             label: 'Payment',
-                            value:
-                                booking.paymentMethod == booking.paymentMethod
-                                ? booking.paymentMethod.name == 'digital'
-                                      ? 'Digital'
-                                      : 'Pay at Venue'
-                                : booking.paymentMethod.name,
+                            value: booking.paymentMethod.name == 'digital'
+                                ? 'Online (Razorpay)'
+                                : 'Pay at Venue',
                           ),
                           const Divider(),
                           _ReceiptRow(

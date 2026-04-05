@@ -1,6 +1,9 @@
 enum BookingStatus { pending, confirmed, cancelled }
 
-enum PaymentMethod { digital, payAtVenue }
+// payAtVenue removed — digital only
+enum PaymentMethod { digital }
+
+enum SettlementStatus { pending, settled }
 
 class Booking {
   final String id;
@@ -10,10 +13,20 @@ class Booking {
   final List<String> slotIds;
   final DateTime date;
   final DateTime createdAt;
-  final double totalPrice;
-  final double? discountedPrice;
+
+  // Pricing
+  final double totalPrice;        // amount player paid
+  final double? discountedPrice;  // after coupon (what razorpay charged)
+  final double platformCommission; // 5% of discountedPrice
+  final double ownerPayout;        // discountedPrice - platformCommission
+
+  // Razorpay audit trail
+  final String? razorpayOrderId;
+  final String? razorpayPaymentId;
+
   final PaymentMethod paymentMethod;
   final BookingStatus status;
+  final SettlementStatus settlementStatus;
 
   const Booking({
     required this.id,
@@ -25,7 +38,15 @@ class Booking {
     required this.createdAt,
     required this.totalPrice,
     this.discountedPrice,
+    required this.platformCommission,
+    required this.ownerPayout,
+    this.razorpayOrderId,
+    this.razorpayPaymentId,
     this.paymentMethod = PaymentMethod.digital,
     required this.status,
+    this.settlementStatus = SettlementStatus.pending,
   });
+
+  // Convenience: actual amount charged to player
+  double get amountCharged => discountedPrice ?? totalPrice;
 }

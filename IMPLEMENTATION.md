@@ -3,6 +3,7 @@ This document serves as the implementation roadmap for "Namma Turfy", a sports g
 
 ### Core Agent Directives
 *   **Target Platforms:** Android and Web ONLY.
+*   **Security:** Always verify Firestore security rules when adding new collections.
 
 ---
 
@@ -10,15 +11,12 @@ This document serves as the implementation roadmap for "Namma Turfy", a sports g
 **Goal:** Establish user onboarding, venue discovery, real-time booking, and checkout.
 
 *   [x] **Step 1.1: Authentication (Google-Only)**
-    *   Implement Firebase Authentication restricted entirely to Google Sign-In.
-    *   **Constraint:** Do not ask for a phone number during the initial onboarding. The login flow must be frictionless.
 *   [x] **Step 1.2: Deferred Profile Completion**
-    *   Build a user profile management section where users enter their phone number *after* successful onboarding.
 *   [x] **Step 1.3: Venue Discovery & Real-Time Booking**
-    *   Implement a search and filtering system for venues based on location, date, and availability.
-    *   Build a calendar-based booking system displaying real-time slot availability.
 *   [x] **Step 1.4: Payment Gateway (Razorpay Only)**
-    *   Integrate Razorpay as the exclusive payment gateway.
+*   [x] **Step 1.5: Firestore Security Rules**
+    *   Created `firestore.rules` to ensure players can list slots and owners can manage their venues.
+    *   Updated `firebase.json` to include Firestore configuration.
 
 ---
 

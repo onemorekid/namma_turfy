@@ -5,10 +5,11 @@ import 'package:namma_turfy/domain/entities/coupon.dart';
 
 abstract class VenueRepository {
   // Venues
-  Stream<List<Venue>> watchAllVenues();
+  Stream<List<Venue>> watchAllVenues({String? city});
   Future<List<Venue>> searchVenues({String? sport, String? location});
   Future<Venue?> getVenueById(String id);
   Future<Venue?> getVenueByOwner(String ownerId);
+  Stream<List<Venue>> watchVenuesByOwner(String ownerId);
   Future<void> saveVenue(Venue venue);
 
   // Zones

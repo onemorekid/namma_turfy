@@ -8,6 +8,7 @@ class Slot {
   final double price;
   final SlotStatus status;
   final DateTime? holdExpiry;
+  final String? lockedBy; // userId who currently holds the lock
 
   const Slot({
     required this.id,
@@ -17,9 +18,19 @@ class Slot {
     required this.price,
     required this.status,
     this.holdExpiry,
+    this.lockedBy,
   });
 
-  Slot copyWith({SlotStatus? status, DateTime? holdExpiry, DateTime? endTime}) {
+  bool get isHoldExpired =>
+      holdExpiry != null && holdExpiry!.isBefore(DateTime.now());
+
+  Slot copyWith({
+    SlotStatus? status,
+    DateTime? holdExpiry,
+    DateTime? endTime,
+    String? lockedBy,
+    bool clearLock = false,
+  }) {
     return Slot(
       id: id,
       zoneId: zoneId,
@@ -27,7 +38,8 @@ class Slot {
       endTime: endTime ?? this.endTime,
       price: price,
       status: status ?? this.status,
-      holdExpiry: holdExpiry ?? this.holdExpiry,
+      holdExpiry: clearLock ? null : holdExpiry ?? this.holdExpiry,
+      lockedBy: clearLock ? null : lockedBy ?? this.lockedBy,
     );
   }
 }

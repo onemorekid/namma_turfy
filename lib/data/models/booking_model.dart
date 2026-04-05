@@ -12,11 +12,19 @@ class BookingModel extends Booking {
     required super.createdAt,
     required super.totalPrice,
     super.discountedPrice,
+    required super.platformCommission,
+    required super.ownerPayout,
+    super.razorpayOrderId,
+    super.razorpayPaymentId,
     super.paymentMethod,
     required super.status,
+    super.settlementStatus,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
+    final charged = (json['discountedPrice'] as num?)?.toDouble() ??
+        (json['totalPrice'] as num?)?.toDouble() ??
+        0.0;
     return BookingModel(
       id: json['id'] as String,
       playerId: json['playerId'] as String? ?? '',
@@ -27,24 +35,29 @@ class BookingModel extends Booking {
       createdAt: _parseDateTime(json['createdAt']),
       totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
       discountedPrice: (json['discountedPrice'] as num?)?.toDouble(),
-      paymentMethod: json['paymentMethod'] == 'payAtVenue'
-          ? PaymentMethod.payAtVenue
-          : PaymentMethod.digital,
+      platformCommission: (json['platformCommission'] as num?)?.toDouble() ??
+          charged * 0.05,
+      ownerPayout: (json['ownerPayout'] as num?)?.toDouble() ??
+          charged * 0.95,
+      razorpayOrderId: json['razorpayOrderId'] as String?,
+      razorpayPaymentId: json['razorpayPaymentId'] as String?,
+      paymentMethod: PaymentMethod.digital,
       status: _statusFromString(json['status'] as String? ?? 'confirmed'),
+      settlementStatus: json['settlementStatus'] == 'settled'
+          ? SettlementStatus.settled
+          : SettlementStatus.pending,
     );
   }
 
   factory BookingModel.fromSnapshot(DocumentSnapshot snap) {
     final data = snap.data() as Map<String, dynamic>? ?? {};
     data['id'] = snap.id;
-    // Convert Firestore Timestamps
     if (data['date'] is Timestamp) {
       data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();
     }
     if (data['createdAt'] is Timestamp) {
-      data['createdAt'] = (data['createdAt'] as Timestamp)
-          .toDate()
-          .toIso8601String();
+      data['createdAt'] =
+          (data['createdAt'] as Timestamp).toDate().toIso8601String();
     }
     return BookingModel.fromJson(data);
   }
@@ -59,10 +72,13 @@ class BookingModel extends Booking {
     'createdAt': createdAt.toIso8601String(),
     'totalPrice': totalPrice,
     if (discountedPrice != null) 'discountedPrice': discountedPrice,
-    'paymentMethod': paymentMethod == PaymentMethod.payAtVenue
-        ? 'payAtVenue'
-        : 'digital',
+    'platformCommission': platformCommission,
+    'ownerPayout': ownerPayout,
+    if (razorpayOrderId != null) 'razorpayOrderId': razorpayOrderId,
+    if (razorpayPaymentId != null) 'razorpayPaymentId': razorpayPaymentId,
+    'paymentMethod': 'digital',
     'status': status.name,
+    'settlementStatus': settlementStatus.name,
   };
 
   static DateTime _parseDateTime(dynamic value) {

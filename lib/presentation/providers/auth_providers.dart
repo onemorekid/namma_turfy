@@ -4,7 +4,9 @@ import 'package:namma_turfy/domain/entities/user.dart';
 import 'package:namma_turfy/domain/repositories/auth_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return AuthRepositoryImpl();
+  final repo = AuthRepositoryImpl();
+  ref.onDispose(repo.dispose);
+  return repo;
 });
 
 final authStateChangesProvider = StreamProvider<UserEntity?>((ref) {
