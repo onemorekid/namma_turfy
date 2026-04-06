@@ -160,12 +160,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final data = Map<String, dynamic>.from(result.data as Map);
       _pendingOrderId = data['orderId'] as String;
 
+      // cloud_functions can wrap large ints as fixnum.Int64 on some platforms.
+      // Always parse via toString() to get a plain Dart int for the Razorpay SDK.
+      final amount = int.parse(data['amount'].toString());
+
       // 1c. Open Razorpay SDK
       _razorpay.open({
         'key': data['keyId'],
         'order_id': _pendingOrderId,
-        'amount': data['amount'],
-        'currency': data['currency'],
+        'amount': amount,
+        'currency': data['currency'].toString(),
         'name': 'Namma Turfy',
         'description': 'Booking at ${widget.venue.name}',
         'prefill': {

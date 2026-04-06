@@ -1,4 +1,4 @@
-package com.example.namma_turfy
+package com.pulsesoftware.turfy
 
 import io.flutter.embedding.android.FlutterActivity
 

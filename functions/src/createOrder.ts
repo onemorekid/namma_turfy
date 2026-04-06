@@ -159,12 +159,15 @@ export const createOrder = functions.onCall(
 
       console.log(`[createOrder] Razorpay order created: ${order.id}`);
 
+      // Explicitly convert amount to a plain JS number (not RazorpayAmount / Int64)
+      // so the Dart cloud_functions package doesn't wrap it in fixnum.Int64,
+      // which the Razorpay Flutter SDK cannot consume.
       return {
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
+        orderId: String(order.id),
+        amount: Number(order.amount),
+        currency: String(order.currency),
         keyId: keyId,
-        discountApplied: couponDiscount,
+        discountApplied: Number(couponDiscount),
       };
     } catch (e) {
       console.error("[createOrder] Razorpay order creation failed:", e);
