@@ -5,20 +5,22 @@ import Razorpay from "razorpay";
 /**
  * createOrder — called by Flutter before opening Razorpay SDK.
  *
- * Input  (body): { amountInPaise: number, venueId: string, playerId: string, couponCode?: string }
- * Output (json): { orderId, amount, currency, keyId, discountApplied }
+ * 1. Validates auth + inputs
+ * 2. Computes server-side subtotal from Firestore slot prices
+ * 3. Validates coupon (expiry, email restriction, usage limit)
+ * 4. Creates a Razorpay order
+ * 5. Writes a `pending_orders/{razorpayOrderId}` document so the webhook
+ *    can recover orphaned payments if the app crashes before verifyAndBook.
  *
- * Set secrets via:
+ * Secrets required:
  *   firebase functions:secrets:set RAZORPAY_KEY_ID
  *   firebase functions:secrets:set RAZORPAY_KEY_SECRET
  */
 export const createOrder = functions.onCall(
   { secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] },
   async (request) => {
-    console.log("[createOrder] Function started");
     // ── 0. Auth check ─────────────────────────────────────────────────────
     if (!request.auth) {
-      console.warn("[createOrder] Unauthenticated request");
       throw new functions.HttpsError(
         "unauthenticated",
         "You must be signed in to create an order"
@@ -32,26 +34,16 @@ export const createOrder = functions.onCall(
       couponCode?: string;
     };
 
-    console.log(`[createOrder] slotIds: ${slotIds}, venueId: ${venueId}, playerId: ${playerId}, couponCode: ${couponCode}`);
-
     if (!slotIds || slotIds.length === 0) {
-      console.warn("[createOrder] slotIds are required but missing or empty");
-      throw new functions.HttpsError(
-        "invalid-argument",
-        "slotIds are required"
-      );
+      throw new functions.HttpsError("invalid-argument", "slotIds are required");
     }
     if (!venueId || !playerId) {
-      console.warn(`[createOrder] Missing venueId or playerId: venueId=${venueId}, playerId=${playerId}`);
       throw new functions.HttpsError(
         "invalid-argument",
         "venueId and playerId are required"
       );
     }
-
-    // ── 0.1 Player ID check ────────────────────────────────────────────────
     if (request.auth.uid !== playerId) {
-      console.warn(`[createOrder] auth.uid mismatch: auth.uid=${request.auth.uid}, playerId=${playerId}`);
       throw new functions.HttpsError(
         "permission-denied",
         "playerId does not match authenticated user"
@@ -60,33 +52,32 @@ export const createOrder = functions.onCall(
 
     const db = admin.firestore();
 
-    // ── 0.2 Fetch slot docs to compute server-side subtotal ─────────────────
+    // ── 1. Fetch slot docs → server-side subtotal ──────────────────────────
     const slotRefs = slotIds.map((id) => db.collection("slots").doc(id));
     const slotDocs = await Promise.all(slotRefs.map((r) => r.get()));
 
     let subtotalInPaise = 0;
+    let zoneId = "";
     for (const doc of slotDocs) {
       if (!doc.exists) {
-        console.error(`[createOrder] Slot doc ${doc.id} not found`);
         throw new functions.HttpsError("not-found", `Slot ${doc.id} not found`);
       }
-      const data = doc.data();
-      const price = (data?.price as number) ?? 0;
-      subtotalInPaise += Math.round(price * 100);
-      console.log(`[createOrder] Slot ${doc.id} price: ${price}, subtotal: ${subtotalInPaise}`);
+      const data = doc.data()!;
+      subtotalInPaise += Math.round(((data.price as number) ?? 0) * 100);
+      if (!zoneId) zoneId = (data.zoneId as string) ?? "";
     }
 
     if (subtotalInPaise < 100) {
-      console.warn(`[createOrder] subtotalInPaise (${subtotalInPaise}) is too low`);
       throw new functions.HttpsError(
         "failed-precondition",
         "Total amount must be at least ₹1"
       );
     }
 
-    // ── 1. Coupon validation (before creating Razorpay order) ──────────────
+    // ── 2. Coupon validation ───────────────────────────────────────────────
     let discountedAmountInPaise = subtotalInPaise;
     let couponDiscount = 0;
+    let couponDocId: string | null = null;
 
     if (couponCode) {
       const couponSnap = await db
@@ -96,7 +87,9 @@ export const createOrder = functions.onCall(
         .get();
 
       if (!couponSnap.empty) {
-        const couponData = couponSnap.docs[0].data();
+        const couponDoc = couponSnap.docs[0];
+        const couponData = couponDoc.data();
+
         const validTo: admin.firestore.Timestamp | string = couponData.validTo;
         const validToMs =
           validTo instanceof admin.firestore.Timestamp
@@ -104,13 +97,22 @@ export const createOrder = functions.onCall(
             : new Date(validTo as string).getTime();
 
         if (validToMs >= Date.now()) {
-          // Check restricted emails if present
+          // Check usage limit (pre-check; atomic enforcement happens in verifyAndBook)
+          const usageCount: number = couponData.usageCount ?? 0;
+          const usageLimit: number = couponData.usageLimit ?? 100;
+          if (usageCount >= usageLimit) {
+            throw new functions.HttpsError(
+              "resource-exhausted",
+              "This coupon has reached its usage limit"
+            );
+          }
+
+          // Check restricted emails
           const restrictedEmails: string[] | undefined = couponData.restrictedEmails;
           let emailAllowed = true;
           if (restrictedEmails && restrictedEmails.length > 0) {
             const userRecord = await admin.auth().getUser(request.auth.uid);
-            const userEmail = userRecord.email ?? "";
-            emailAllowed = restrictedEmails.includes(userEmail);
+            emailAllowed = restrictedEmails.includes(userRecord.email ?? "");
           }
 
           if (emailAllowed) {
@@ -120,58 +122,73 @@ export const createOrder = functions.onCall(
             if (discountType === "percentage") {
               couponDiscount = Math.round(subtotalInPaise * (discountValue / 100));
             } else {
-              // flat discount — value is in rupees, convert to paise
               couponDiscount = Math.round(discountValue * 100);
             }
 
             discountedAmountInPaise = Math.max(100, subtotalInPaise - couponDiscount);
             couponDiscount = subtotalInPaise - discountedAmountInPaise;
+            couponDocId = couponDoc.id;
           }
         }
       }
     }
 
-    // ── 2. Create Razorpay order ───────────────────────────────────────────
+    // ── 3. Create Razorpay order ───────────────────────────────────────────
     const keyId = process.env.RAZORPAY_KEY_ID;
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
-
     if (!keyId || !keySecret) {
-      console.error("[createOrder] Razorpay API keys are missing in secrets");
       throw new functions.HttpsError(
         "failed-precondition",
-        "Payment gateway is not configured (missing API keys)"
+        "Payment gateway is not configured"
       );
     }
 
-    console.log(`[createOrder] Creating Razorpay order with amount: ${discountedAmountInPaise}`);
-    const razorpay = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let order: any;
     try {
-      const order = await razorpay.orders.create({
+      order = await razorpay.orders.create({
         amount: discountedAmountInPaise,
         currency: "INR",
-        receipt: `rcpt_${playerId.substring(0, Math.min(8, playerId.length))}_${Date.now()}`,
-        notes: { venueId, playerId },
+        receipt: `rcpt_${playerId.substring(0, 8)}_${Date.now()}`,
+        notes: { venueId, playerId, zoneId },
       });
-
-      console.log(`[createOrder] Razorpay order created: ${order.id}`);
-
-      // Explicitly convert amount to a plain JS number (not RazorpayAmount / Int64)
-      // so the Dart cloud_functions package doesn't wrap it in fixnum.Int64,
-      // which the Razorpay Flutter SDK cannot consume.
-      return {
-        orderId: String(order.id),
-        amount: Number(order.amount),
-        currency: String(order.currency),
-        keyId: keyId,
-        discountApplied: Number(couponDiscount),
-      };
     } catch (e) {
       console.error("[createOrder] Razorpay order creation failed:", e);
-      throw new functions.HttpsError("internal", "Could not create payment order via Razorpay");
+      throw new functions.HttpsError(
+        "internal",
+        "Could not create payment order via Razorpay"
+      );
     }
+    if (!order || !order.id) {
+      throw new functions.HttpsError("internal", "Razorpay returned an empty order");
+    }
+
+    // ── 4. Persist pending_orders for webhook recovery ─────────────────────
+    // The Razorpay webhook uses this document to reconstruct the booking if
+    // the app crashes after payment but before verifyAndBook is called.
+    await db.collection("pending_orders").doc(String(order.id)).set({
+      razorpayOrderId: String(order.id),
+      slotIds,
+      venueId,
+      zoneId,
+      playerId,
+      couponCode: couponCode ?? null,
+      couponDocId,
+      amountInPaise: Number(order.amount),
+      status: "pending", // updated to 'processed' by verifyAndBook / webhook
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    console.log(`[createOrder] Order ${order.id} created for player ${playerId}`);
+
+    return {
+      orderId: String(order.id),
+      amount: Number(order.amount),
+      currency: String(order.currency),
+      keyId,
+      discountApplied: Number(couponDiscount),
+    };
   }
 );

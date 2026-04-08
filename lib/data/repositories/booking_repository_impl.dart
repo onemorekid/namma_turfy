@@ -57,24 +57,49 @@ class BookingRepositoryImpl implements BookingRepository {
   /// Verify that [userId] still holds active (non-expired) locks on all slots.
   @override
   Future<bool> verifyLocks(List<Slot> slots, String userId) async {
+    debugPrint(
+      '[BookingRepositoryImpl] verifyLocks: checking ${slots.length} slots for user $userId',
+    );
     try {
       final now = DateTime.now();
       for (final slot in slots) {
-        final doc =
-            await _firestore.collection('slots').doc(slot.id).get();
-        if (!doc.exists) return false;
+        final doc = await _firestore.collection('slots').doc(slot.id).get();
+        if (!doc.exists) {
+          debugPrint('[BookingRepositoryImpl] verifyLocks: slot ${slot.id} document missing');
+          return false;
+        }
         final data = doc.data() as Map<String, dynamic>;
-        if (data['status'] != 'locked') return false;
-        if (data['lockedBy'] != userId) return false;
+        if (data['status'] != 'locked') {
+          debugPrint(
+            '[BookingRepositoryImpl] verifyLocks: slot ${slot.id} is ${data['status']}, not locked',
+          );
+          return false;
+        }
+        if (data['lockedBy'] != userId) {
+          debugPrint(
+            '[BookingRepositoryImpl] verifyLocks: slot ${slot.id} locked by ${data['lockedBy']}, not $userId',
+          );
+          return false;
+        }
         final expiryRaw = data['holdExpiry'];
-        if (expiryRaw == null) return false;
+        if (expiryRaw == null) {
+          debugPrint('[BookingRepositoryImpl] verifyLocks: slot ${slot.id} holdExpiry is null');
+          return false;
+        }
         final expiry = expiryRaw is Timestamp
             ? expiryRaw.toDate()
             : DateTime.parse(expiryRaw as String);
-        if (expiry.isBefore(now)) return false;
+        if (expiry.isBefore(now)) {
+          debugPrint(
+            '[BookingRepositoryImpl] verifyLocks: slot ${slot.id} hold expired at $expiry',
+          );
+          return false;
+        }
       }
+      debugPrint('[BookingRepositoryImpl] verifyLocks: all slots valid');
       return true;
     } catch (e) {
+      debugPrint('[BookingRepositoryImpl] verifyLocks error: $e');
       return false;
     }
   }
@@ -84,7 +109,7 @@ class BookingRepositoryImpl implements BookingRepository {
     return _firestore
         .collection('bookings')
         .where('playerId', isEqualTo: playerId)
-        .orderBy('createdAt', descending: true)
+        .orderBy('date', descending: true)
         .snapshots()
         .map((s) =>
             s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());

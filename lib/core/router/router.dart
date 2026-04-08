@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
+import 'package:namma_turfy/domain/entities/user.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/screens/admin_dashboard_screen.dart';
+import 'package:namma_turfy/presentation/screens/contact_screen.dart';
+import 'package:namma_turfy/presentation/screens/payment_callback_screen.dart';
 import 'package:namma_turfy/presentation/screens/checkout_screen.dart';
 import 'package:namma_turfy/presentation/screens/event_discovery_screen.dart';
 import 'package:namma_turfy/presentation/screens/home_screen.dart';
@@ -41,8 +44,11 @@ class _RouterNotifier extends ChangeNotifier {
     final loc = state.matchedLocation;
 
     // Not logged in → always go to login.
+    // Allow payment-callback through so the booking can be confirmed even
+    // if the session briefly appears unauthenticated after the redirect.
     if (user == null) {
-      return loc == '/login' ? null : '/login';
+      if (loc == '/login' || loc == '/payment-callback') return null;
+      return '/login';
     }
 
     // Suspended account.
@@ -55,12 +61,18 @@ class _RouterNotifier extends ChangeNotifier {
       return loc == '/profile-completion' ? null : '/profile-completion';
     }
 
+    // Handle role-based redirection from home.
+    if (loc == '/') {
+      if (user.activeRole == UserRole.owner) return '/owner';
+      if (user.activeRole == UserRole.admin) return '/admin';
+    }
+
     // Logged-in user trying to access auth-only screens → send home.
     if (loc == '/login' ||
         loc == '/splash' ||
         loc == '/suspended' ||
         loc == '/profile-completion') {
-      return '/';
+      return user.activeRole == UserRole.owner ? '/owner' : '/';
     }
 
     return null;
@@ -139,6 +151,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/my-bookings',
         builder: (context, state) => const PlayerBookingsScreen(),
+      ),
+      GoRoute(
+        path: '/contact',
+        builder: (context, state) => const ContactScreen(),
+      ),
+      GoRoute(
+        path: '/payment-callback',
+        builder: (context, state) => PaymentCallbackScreen(
+          paymentId: state.uri.queryParameters['razorpay_payment_id'],
+          orderId: state.uri.queryParameters['razorpay_order_id'],
+          signature: state.uri.queryParameters['razorpay_signature'],
+        ),
       ),
     ],
   );

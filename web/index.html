@@ -32,6 +32,67 @@
   <title>namma_turfy</title>
   <link rel="manifest" href="manifest.json">
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    function _isMobileBrowser() {
+      return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+    }
+
+    // Store booking metadata before redirect (sessionStorage survives reload).
+    window.storeRazorpayBookingData = function(orderId, meta) {
+      sessionStorage.setItem('rzp_meta_' + orderId, JSON.stringify(meta));
+    };
+
+    // Retrieve booking metadata after redirect callback.
+    window.getRazorpayBookingData = function(orderId) {
+      var raw = sessionStorage.getItem('rzp_meta_' + orderId);
+      if (!raw) return null;
+      sessionStorage.removeItem('rzp_meta_' + orderId); // consume once
+      return JSON.parse(raw);
+    };
+
+    // Bridge called by Flutter web to open Razorpay checkout.
+    // Desktop: opens modal (requires direct user-gesture tap).
+    // Mobile:  uses redirect flow (modal unreliable on mobile browsers).
+    window.openRazorpay = function(options, onSuccess, onError) {
+      if (typeof Razorpay === 'undefined') {
+        onError(0, 'Razorpay SDK not loaded');
+        return;
+      }
+
+      var rzpOptions = {
+        key: options.key,
+        amount: options.amount,
+        currency: options.currency,
+        order_id: options.order_id,
+        name: options.name || 'Namma Turfy',
+        description: options.description || 'Venue Booking',
+        prefill: options.prefill || {},
+        theme: { color: '#35CA67' },
+      };
+
+      if (_isMobileBrowser()) {
+        // Redirect flow: Razorpay redirects back to /payment-callback with
+        // payment params in the URL. Booking metadata is stored in sessionStorage
+        // so the callback screen can call verifyAndBook after the redirect.
+        rzpOptions.redirect = true;
+        rzpOptions.callback_url = window.location.origin + '/payment-callback';
+      } else {
+        rzpOptions.handler = function(response) {
+          onSuccess(
+            response.razorpay_payment_id,
+            response.razorpay_order_id,
+            response.razorpay_signature
+          );
+        };
+        rzpOptions.modal = {
+          ondismiss: function() { onError(0, 'Payment cancelled'); }
+        };
+      }
+
+      var rzp = new Razorpay(rzpOptions);
+      rzp.open();
+    };
+  </script>
 </head>
 <body>
   <!--

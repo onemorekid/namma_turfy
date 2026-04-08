@@ -119,6 +119,14 @@ class AppDrawer extends ConsumerWidget {
           ],
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.headset_mic_outlined),
+            title: const Text('Contact Us'),
+            onTap: () {
+              Navigator.pop(context);
+              context.push('/contact');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Logout'),
             onTap: () {

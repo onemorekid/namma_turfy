@@ -20,9 +20,14 @@ class Booking {
   final double platformCommission; // 5% of discountedPrice
   final double ownerPayout;        // discountedPrice - platformCommission
 
+  // Denormalized venue info (set at booking time for fast list rendering)
+  final String? venueName;
+  final String? venueLocation;
+
   // Razorpay audit trail
   final String? razorpayOrderId;
   final String? razorpayPaymentId;
+  final String? razorpaySignature; // HMAC stored for cryptographic verification
 
   final PaymentMethod paymentMethod;
   final BookingStatus status;
@@ -40,8 +45,11 @@ class Booking {
     this.discountedPrice,
     required this.platformCommission,
     required this.ownerPayout,
+    this.venueName,
+    this.venueLocation,
     this.razorpayOrderId,
     this.razorpayPaymentId,
+    this.razorpaySignature,
     this.paymentMethod = PaymentMethod.digital,
     required this.status,
     this.settlementStatus = SettlementStatus.pending,

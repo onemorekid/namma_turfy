@@ -17,6 +17,11 @@ class Venue {
   final bool isSuspended;
   final int commissionRate; // platform commission %, default 5
 
+  // Venue policies (shown to player on receipt + bookings page)
+  final String? generalInstructions;
+  final String? cancellationPolicy;
+  final List<String> rules;
+
   // Owner bank details for weekly settlement payouts
   final String? ownerBankAccountNumber;
   final String? ownerBankIfsc;
@@ -47,6 +52,9 @@ class Venue {
     this.availableHours = const [],
     this.isSuspended = false,
     this.commissionRate = 5,
+    this.generalInstructions,
+    this.cancellationPolicy,
+    this.rules = const [],
     this.ownerBankAccountNumber,
     this.ownerBankIfsc,
     this.ownerBankName,
@@ -71,6 +79,9 @@ class Venue {
     List<String>? availableHours,
     bool? isSuspended,
     int? commissionRate,
+    String? generalInstructions,
+    String? cancellationPolicy,
+    List<String>? rules,
     String? ownerBankAccountNumber,
     String? ownerBankIfsc,
     String? ownerBankName,
@@ -95,6 +106,9 @@ class Venue {
       availableHours: availableHours ?? this.availableHours,
       isSuspended: isSuspended ?? this.isSuspended,
       commissionRate: commissionRate ?? this.commissionRate,
+      generalInstructions: generalInstructions ?? this.generalInstructions,
+      cancellationPolicy: cancellationPolicy ?? this.cancellationPolicy,
+      rules: rules ?? this.rules,
       ownerBankAccountNumber: ownerBankAccountNumber ?? this.ownerBankAccountNumber,
       ownerBankIfsc: ownerBankIfsc ?? this.ownerBankIfsc,
       ownerBankName: ownerBankName ?? this.ownerBankName,

@@ -107,10 +107,14 @@ class HomeScreen extends ConsumerWidget {
 
                 if (selectedHour != null) {
                   filtered = filtered.where((v) {
-                    if (v.availableHours.length < 2) return true;
-                    final openHour = int.tryParse(v.availableHours.first.split(':').first) ?? 6;
-                    final closeHour = int.tryParse(v.availableHours.last.split(':').first) ?? 22;
-                    return selectedHour >= openHour && selectedHour < closeHour;
+                    // No hours listed → treat as always open, always show.
+                    if (v.availableHours.isEmpty) return true;
+                    // Supports formats like "09:00", "9:00", "9", "21:00".
+                    final hours = v.availableHours
+                        .map((h) => int.tryParse(h.split(':').first))
+                        .whereType<int>()
+                        .toSet();
+                    return hours.contains(selectedHour);
                   }).toList();
                 }
 
@@ -140,8 +144,31 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     Expanded(
                       child: filtered.isEmpty
-                          ? const Center(
-                              child: Text('No venues found. Try adjusting filters.'),
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Text(
+                                    'No venues found in this city.',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                  if (user?.preferredCity != null) ...[
+                                    const SizedBox(height: 12),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        ref
+                                            .read(authRepositoryProvider)
+                                            .updateProfile(
+                                              name: user?.name ?? 'User',
+                                              preferredCity: '',
+                                            );
+                                      },
+                                      icon: const Icon(Icons.location_off),
+                                      label: const Text('Show all cities'),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             )
                           : ListView.builder(
                               padding: const EdgeInsets.all(16),
@@ -271,15 +298,24 @@ class _CityPicker extends ConsumerWidget {
                         ? const Icon(Icons.check, color: Color(0xFF35CA67))
                         : null,
                     onTap: () {
-                      ref
-                          .read(authRepositoryProvider)
-                          .updateProfile(
+                      ref.read(authRepositoryProvider).updateProfile(
                             name: user?.name ?? 'User',
                             preferredCity: city,
                           );
                       Navigator.pop(context);
                     },
                   ),
+                ),
+                const Divider(),
+                ListTile(
+                  title: const Text('Show All Cities'),
+                  onTap: () {
+                    ref.read(authRepositoryProvider).updateProfile(
+                          name: user?.name ?? 'User',
+                          preferredCity: '',
+                        );
+                    Navigator.pop(context);
+                  },
                 ),
               ],
             ),

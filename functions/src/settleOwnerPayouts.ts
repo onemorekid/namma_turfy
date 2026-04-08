@@ -8,13 +8,12 @@ import axios from "axios";
  * For each venue with pending unsettled bookings:
  *   1. Sums ownerPayout across all pending bookings
  *   2. Calls Razorpay Payout API to transfer to owner's fund account
- *   3. Marks all processed bookings as settlementStatus = 'settled'
- *   4. Writes a settlement_records document for audit
+ *   3. Marks bookings as settlementStatus = 'settled'
+ *   4. Writes a settlement_records document (status: 'success')
  *
- * Prerequisites per venue:
- *   - venue.razorpayFundAccountId must be set (done during owner onboarding)
- *
- * If razorpayFundAccountId is missing, the venue is skipped and logged.
+ * On payout failure:
+ *   - Writes a settlement_failures document for ops visibility
+ *   - Bookings remain in 'pending' state and will be retried next Monday
  */
 export const settleOwnerPayouts = functions.onSchedule(
   {
@@ -69,6 +68,18 @@ export const settleOwnerPayouts = functions.onSchedule(
         console.warn(
           `Venue ${venueId} (${venue.name}) missing razorpayFundAccountId. Skipping.`
         );
+        // Log as a settlement failure so ops can follow up
+        await db.collection("settlement_failures").add({
+          venueId,
+          venueName: venue.name ?? "",
+          ownerId: venue.ownerId ?? "",
+          bookingCount: bookings.length,
+          totalOwnerPayout: bookings.reduce((s, b) => s + (b.ownerPayout ?? 0), 0),
+          bookingIds: bookings.map((b) => b.id),
+          reason: "Missing razorpayFundAccountId — owner onboarding incomplete",
+          failedAt: admin.firestore.FieldValue.serverTimestamp(),
+          retryable: true,
+        });
         continue;
       }
 
@@ -83,19 +94,22 @@ export const settleOwnerPayouts = functions.onSchedule(
         continue;
       }
 
+      // ── 4. Call Razorpay Payout API ───────────────────────────────────────
+      const referenceId = `settle_${venueId}_${Date.now()}`;
+      let razorpayPayoutId: string | null = null;
+
       try {
-        // ── 4. Call Razorpay Payout API ───────────────────────────────────
         const payoutResponse = await axios.post(
           "https://api.razorpay.com/v1/payouts",
           {
-            account_number: process.env.RAZORPAY_PAYOUT_ACCOUNT!, // Your X (current) account
+            account_number: process.env.RAZORPAY_PAYOUT_ACCOUNT!,
             fund_account_id: fundAccountId,
             amount: amountInPaise,
             currency: "INR",
             mode: "IMPS",
             purpose: "vendor_advance",
             queue_if_low_balance: true,
-            reference_id: `settle_${venueId}_${Date.now()}`,
+            reference_id: referenceId,
             narration: `NammaTurfy settlement - ${venue.name}`,
           },
           {
@@ -106,12 +120,12 @@ export const settleOwnerPayouts = functions.onSchedule(
           }
         );
 
-        const razorpayPayoutId = payoutResponse.data.id as string;
+        razorpayPayoutId = payoutResponse.data.id as string;
         console.log(
           `Payout ${razorpayPayoutId} created for venue ${venueId}: ₹${totalOwnerPayout}`
         );
 
-        // ── 5. Mark bookings as settled (batch) ───────────────────────────
+        // ── 5. Mark bookings as settled + write settlement record ───────────
         const batch = db.batch();
         for (const booking of bookings) {
           batch.update(db.collection("bookings").doc(booking.id), {
@@ -119,7 +133,11 @@ export const settleOwnerPayouts = functions.onSchedule(
           });
         }
 
-        // Write settlement audit record
+        const totalCommission =
+          bookingsSnap.docs
+            .filter((d) => bookings.some((b) => b.id === d.id))
+            .reduce((s, d) => s + ((d.data().platformCommission as number) ?? 0), 0);
+
         const settlementRef = db.collection("settlement_records").doc();
         batch.set(settlementRef, {
           venueId,
@@ -127,9 +145,12 @@ export const settleOwnerPayouts = functions.onSchedule(
           ownerId: venue.ownerId ?? "",
           bookingCount: bookings.length,
           totalOwnerPayout,
+          totalCommission: parseFloat(totalCommission.toFixed(2)),
           amountInPaise,
           razorpayPayoutId,
           fundAccountId,
+          referenceId,
+          status: "success",
           settledAt: admin.firestore.FieldValue.serverTimestamp(),
           bookingIds: bookings.map((b) => b.id),
         });
@@ -141,7 +162,23 @@ export const settleOwnerPayouts = functions.onSchedule(
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`Payout failed for venue ${venueId}: ${msg}`);
-        // Don't rethrow — continue with other venues
+
+        // Persist failure so ops team is alerted and can retry manually
+        await db.collection("settlement_failures").add({
+          venueId,
+          venueName: venue.name ?? "",
+          ownerId: venue.ownerId ?? "",
+          bookingCount: bookings.length,
+          totalOwnerPayout,
+          amountInPaise,
+          bookingIds: bookings.map((b) => b.id),
+          referenceId,
+          razorpayPayoutId, // null if Razorpay call failed outright
+          reason: msg,
+          failedAt: admin.firestore.FieldValue.serverTimestamp(),
+          retryable: true,
+        });
+        // Don't rethrow — continue processing other venues
       }
     }
   }

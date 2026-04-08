@@ -43,8 +43,8 @@ service cloud.firestore {
     // Slots collection
     match /slots/{slotId} {
       allow read: if true;
-      
-      allow update: if isSignedIn() && 
+
+      allow update: if isSignedIn() &&
         (
           // Players locking slots (must specify lockedBy as themselves)
           (request.resource.data.status == 'locked' && resource.data.status == 'available' && request.resource.data.lockedBy == request.auth.uid) ||
@@ -53,15 +53,15 @@ service cloud.firestore {
           // Admin/Owner overrides
           isAdmin() || isVenueOwner(get(/databases/$(database)/documents/zones/$(resource.data.zoneId)).data.venueId)
         );
-      
+
       allow create, delete: if isAdmin() || (isSignedIn() && hasRole('vendor'));
     }
 
     // Bookings collection
+    // Client writes are blocked — only Cloud Functions create/update bookings.
     match /bookings/{bookingId} {
       allow read: if isSignedIn() && (resource.data.playerId == request.auth.uid || isVenueOwner(resource.data.venueId) || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.playerId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     // Coupons collection
@@ -75,6 +75,43 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn();
       allow update, delete: if isAdmin() || (resource.data.creatorId == request.auth.uid);
+    }
+
+    // Pending orders — created by createOrder, read by webhook / verifyAndBook.
+    // Clients have no direct access; the Cloud Functions run as admin.
+    match /pending_orders/{orderId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Settlement records — financial audit, admin-only.
+    match /settlement_records/{recordId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Settlement failures — ops visibility, admin-only.
+    match /settlement_failures/{failureId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Orphaned payments — payments without a booking (auto-refund attempted).
+    // Admin can read/resolve; client cannot touch.
+    match /orphaned_payments/{paymentId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Payment attempts — failure log written by Flutter client + webhook.
+    // Players can create their own records (for failure reporting); admin reads all.
+    match /payment_attempts/{attemptId} {
+      allow create: if isSignedIn() && request.resource.data.playerId == request.auth.uid;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Coupon usages — audit trail for coupon redemptions.
+    // Players can read their own usage history; admin reads all.
+    match /coupon_usages/{usageId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.playerId == request.auth.uid);
+      allow write: if isAdmin();
     }
   }
 }
