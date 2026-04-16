@@ -40,11 +40,11 @@ class SlotModel extends Slot {
   Map<String, dynamic> toJson() => {
     'id': id,
     'zoneId': zoneId,
-    'startTime': startTime.toIso8601String(),
-    if (endTime != null) 'endTime': endTime!.toIso8601String(),
+    'startTime': Timestamp.fromDate(startTime),
+    if (endTime != null) 'endTime': Timestamp.fromDate(endTime!),
     'price': price,
     'status': status.name,
-    if (holdExpiry != null) 'holdExpiry': holdExpiry!.toIso8601String(),
+    if (holdExpiry != null) 'holdExpiry': Timestamp.fromDate(holdExpiry!),
     if (lockedBy != null) 'lockedBy': lockedBy,
   };
 

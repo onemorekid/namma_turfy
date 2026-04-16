@@ -54,7 +54,8 @@ service cloud.firestore {
           isAdmin() || isVenueOwner(get(/databases/$(database)/documents/zones/$(resource.data.zoneId)).data.venueId)
         );
 
-      allow create, delete: if isAdmin() || (isSignedIn() && hasRole('vendor'));
+      allow create: if isAdmin() || (isSignedIn() && isVenueOwner(get(/databases/$(database)/documents/zones/$(request.resource.data.zoneId)).data.venueId));
+      allow delete: if isAdmin() || (isSignedIn() && isVenueOwner(get(/databases/$(database)/documents/zones/$(resource.data.zoneId)).data.venueId));
     }
 
     // Bookings collection
@@ -67,7 +68,7 @@ service cloud.firestore {
     // Coupons collection
     match /coupons/{couponId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin() || (isSignedIn() && hasRole('vendor') && (resource == null || request.resource.data.ownerId == request.auth.uid));
+      allow write: if isAdmin() || (isSignedIn() && hasRole('owner') && (resource == null || request.resource.data.ownerId == request.auth.uid));
     }
 
     // Sport Events collection

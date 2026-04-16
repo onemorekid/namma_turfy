@@ -42,7 +42,7 @@ class BookingRepositoryImpl implements BookingRepository {
           tx.update(ref, {
             'status': SlotStatus.locked.name,
             'lockedBy': userId,
-            'holdExpiry': expiry.toIso8601String(),
+            'holdExpiry': Timestamp.fromDate(expiry),
           });
         }
       });

@@ -513,6 +513,7 @@ class _ZoneItem extends ConsumerWidget {
     TimeOfDay endTime = const TimeOfDay(hour: 22, minute: 0);
     final priceController = TextEditingController(text: '500');
     final durationController = TextEditingController(text: '60');
+    bool isGenerating = false;
 
     showDialog(
       context: context,
@@ -594,56 +595,88 @@ class _ZoneItem extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: isGenerating ? null : () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                final slots = <Slot>[];
-                final duration = int.tryParse(durationController.text) ?? 60;
-                final price = double.tryParse(priceController.text) ?? 500.0;
+              onPressed: isGenerating
+                  ? null
+                  : () async {
+                      final slots = <Slot>[];
+                      final duration =
+                          int.tryParse(durationController.text) ?? 60;
+                      final price =
+                          double.tryParse(priceController.text) ?? 500.0;
 
-                for (
-                  int i = 0;
-                  i <= endDate.difference(startDate).inDays;
-                  i++
-                ) {
-                  final currentDate = startDate.add(Duration(days: i));
-                  DateTime current = DateTime(
-                    currentDate.year,
-                    currentDate.month,
-                    currentDate.day,
-                    startTime.hour,
-                    startTime.minute,
-                  );
-                  final dayEnd = DateTime(
-                    currentDate.year,
-                    currentDate.month,
-                    currentDate.day,
-                    endTime.hour,
-                    endTime.minute,
-                  );
-                  while (current.isBefore(dayEnd)) {
-                    final slotEnd = current.add(Duration(minutes: duration));
-                    slots.add(
-                      Slot(
-                        id: 'slot_${zoneId}_${current.millisecondsSinceEpoch}',
-                        zoneId: zoneId,
-                        startTime: current,
-                        endTime: slotEnd,
-                        price: price,
-                        status: SlotStatus.available,
-                      ),
-                    );
-                    current = slotEnd;
-                  }
-                }
-                if (slots.isNotEmpty) {
-                  await ref.read(venueRepositoryProvider).bulkSaveSlots(slots);
-                }
-                if (context.mounted) Navigator.pop(context);
-              },
-              child: const Text('Generate'),
+                      for (
+                        int i = 0;
+                        i <= endDate.difference(startDate).inDays;
+                        i++
+                      ) {
+                        final currentDate = startDate.add(Duration(days: i));
+                        DateTime current = DateTime(
+                          currentDate.year,
+                          currentDate.month,
+                          currentDate.day,
+                          startTime.hour,
+                          startTime.minute,
+                        );
+                        final dayEnd = DateTime(
+                          currentDate.year,
+                          currentDate.month,
+                          currentDate.day,
+                          endTime.hour,
+                          endTime.minute,
+                        );
+                        while (current.isBefore(dayEnd)) {
+                          final slotEnd =
+                              current.add(Duration(minutes: duration));
+                          slots.add(
+                            Slot(
+                              id: 'slot_${zoneId}_${current.millisecondsSinceEpoch}',
+                              zoneId: zoneId,
+                              startTime: current,
+                              endTime: slotEnd,
+                              price: price,
+                              status: SlotStatus.available,
+                            ),
+                          );
+                          current = slotEnd;
+                        }
+                      }
+
+                      if (slots.isEmpty) {
+                        Navigator.pop(context);
+                        return;
+                      }
+
+                      setDialogState(() => isGenerating = true);
+                      try {
+                        await ref
+                            .read(venueRepositoryProvider)
+                            .bulkSaveSlots(slots);
+                        if (context.mounted) Navigator.pop(context);
+                      } catch (e) {
+                        setDialogState(() => isGenerating = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Failed to generate slots: ${e.toString()}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isGenerating
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Generate'),
             ),
           ],
         ),

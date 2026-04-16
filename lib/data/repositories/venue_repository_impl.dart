@@ -15,11 +15,15 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Stream<List<Venue>> watchAllVenues({String? city}) {
+    debugPrint('[VenueRepositoryImpl] watchAllVenues - city filter: "$city"');
     Query query = _firestore.collection('venues');
     if (city != null && city.isNotEmpty) {
       query = query.where('city', isEqualTo: city);
     }
     return query.snapshots().map((snapshot) {
+      debugPrint(
+        '[VenueRepositoryImpl] watchAllVenues - found ${snapshot.docs.length} venues',
+      );
       return snapshot.docs.map((doc) => VenueModel.fromSnapshot(doc)).toList();
     });
   }
@@ -140,8 +144,8 @@ class VenueRepositoryImpl implements VenueRepository {
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
       debugPrint('Filter range: $startOfDay to $endOfDay');
       query = query
-          .where('startTime', isGreaterThanOrEqualTo: startOfDay.toIso8601String())
-          .where('startTime', isLessThanOrEqualTo: endOfDay.toIso8601String());
+          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay));
     }
 
     return query.snapshots().map(
@@ -173,21 +177,29 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> bulkSaveSlots(List<Slot> slots) async {
-    final batch = _firestore.batch();
-    for (final slot in slots) {
-      final model = SlotModel(
-        id: slot.id,
-        zoneId: slot.zoneId,
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-        price: slot.price,
-        status: slot.status,
-        holdExpiry: slot.holdExpiry,
+    // Firestore batches are capped at 500 operations. Split into chunks.
+    const chunkSize = 499;
+    for (int i = 0; i < slots.length; i += chunkSize) {
+      final chunk = slots.sublist(
+        i,
+        (i + chunkSize).clamp(0, slots.length),
       );
-      final docRef = _firestore.collection('slots').doc(slot.id);
-      batch.set(docRef, model.toJson(), SetOptions(merge: true));
+      final batch = _firestore.batch();
+      for (final slot in chunk) {
+        final model = SlotModel(
+          id: slot.id,
+          zoneId: slot.zoneId,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          price: slot.price,
+          status: slot.status,
+          holdExpiry: slot.holdExpiry,
+        );
+        final docRef = _firestore.collection('slots').doc(slot.id);
+        batch.set(docRef, model.toJson(), SetOptions(merge: true));
+      }
+      await batch.commit();
     }
-    await batch.commit();
   }
 
   @override
