@@ -31,6 +31,10 @@ class VenueModel extends Venue {
   });
 
   factory VenueModel.fromJson(Map<String, dynamic> json) {
+    // Debug logging to help identify why images might be missing
+    final imagesList =
+        (json['images'] as List?) ?? (json['imageUrls'] as List?);
+
     return VenueModel(
       id: json['id'] as String,
       ownerId: json['ownerId'] as String? ?? '',
@@ -43,7 +47,7 @@ class VenueModel extends Venue {
       rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
       description: json['description'] as String? ?? '',
       pricePerHour: (json['pricePerHour'] as num?)?.toDouble() ?? 0.0,
-      images: (json['images'] as List?)?.cast<String>() ?? [],
+      images: imagesList?.cast<String>() ?? [],
       features: (json['features'] as List?)?.cast<String>() ?? [],
       sportsTypes: (json['sportsTypes'] as List?)?.cast<String>() ?? [],
       availableHours: (json['availableHours'] as List?)?.cast<String>() ?? [],

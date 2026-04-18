@@ -118,6 +118,9 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
           if (venue == null) {
             return const Center(child: Text('Venue not found'));
           }
+          debugPrint(
+            '[VenueDetailsScreen] venue: ${venue.name}, images: ${venue.images.length}',
+          );
           return Column(
             children: [
               // Image gallery
@@ -126,12 +129,23 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                   height: 200,
                   child: PageView.builder(
                     itemCount: venue.images.length,
-                    itemBuilder: (context, index) => CachedNetworkImage(
-                      imageUrl: venue.images[index],
-                      fit: BoxFit.cover,
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.broken_image, size: 60),
-                    ),
+                    itemBuilder: (context, index) {
+                      debugPrint(
+                        '[VenueDetailsScreen] Loading image[$index]: ${venue.images[index]}',
+                      );
+                      return CachedNetworkImage(
+                        imageUrl: venue.images[index],
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) =>
+                            const Center(child: CircularProgressIndicator()),
+                        errorWidget: (context, url, error) {
+                          debugPrint(
+                            '[VenueDetailsScreen] Error loading image: $error',
+                          );
+                          return const Icon(Icons.broken_image, size: 60);
+                        },
+                      );
+                    },
                   ),
                 )
               else

@@ -91,6 +91,9 @@ class VenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      '[VenueCard] Rendering ${venue.name} with ${venue.images.length} images. First: ${venue.images.isNotEmpty ? venue.images.first : 'none'}',
+    );
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
@@ -98,16 +101,32 @@ class VenueCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (venue.imageUrls.isNotEmpty)
+            if (venue.images.isNotEmpty)
               Image.network(
-                venue.imageUrls.first,
+                venue.images.first,
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => const SizedBox(
-                  height: 150,
-                  child: Icon(Icons.broken_image),
-                ),
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('[VenueCard] Error loading image: $error');
+                  return const SizedBox(
+                    height: 150,
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const SizedBox(
+                    height: 150,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                },
               ),
             Padding(
               padding: const EdgeInsets.all(12.0),
