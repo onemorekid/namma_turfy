@@ -54,3 +54,8 @@ firebase-debug.*.log
 functions/node_modules/
 functions/lib/
 functions/npm-debug.log
+
+# Android signing – NEVER commit these
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
