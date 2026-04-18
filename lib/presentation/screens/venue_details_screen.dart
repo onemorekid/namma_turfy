@@ -118,23 +118,33 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
           if (venue == null) {
             return const Center(child: Text('Venue not found'));
           }
+
+          // Combine venue images with all zone images
+          final List<String> allImages = [...venue.images];
+          zonesAsync.whenData((zones) {
+            for (final zone in zones) {
+              allImages.addAll(zone.images);
+            }
+          });
+
           debugPrint(
-            '[VenueDetailsScreen] venue: ${venue.name}, images: ${venue.images.length}',
+            '[VenueDetailsScreen] venue: ${venue.name}, total images: ${allImages.length} (venue: ${venue.images.length})',
           );
+
           return Column(
             children: [
               // Image gallery
-              if (venue.images.isNotEmpty)
+              if (allImages.isNotEmpty)
                 SizedBox(
                   height: 200,
                   child: PageView.builder(
-                    itemCount: venue.images.length,
+                    itemCount: allImages.length,
                     itemBuilder: (context, index) {
                       debugPrint(
-                        '[VenueDetailsScreen] Loading image[$index]: ${venue.images[index]}',
+                        '[VenueDetailsScreen] Loading image[$index]: ${allImages[index]}',
                       );
                       return CachedNetworkImage(
-                        imageUrl: venue.images[index],
+                        imageUrl: allImages[index],
                         fit: BoxFit.cover,
                         placeholder: (context, url) =>
                             const Center(child: CircularProgressIndicator()),
