@@ -7,6 +7,7 @@ class ZoneModel extends Zone {
     required super.venueId,
     required super.name,
     required super.type,
+    super.images,
   });
 
   factory ZoneModel.fromJson(Map<String, dynamic> json) {
@@ -15,6 +16,7 @@ class ZoneModel extends Zone {
       venueId: json['venueId'] as String? ?? '',
       name: json['name'] as String? ?? '',
       type: json['type'] as String? ?? 'Cricket',
+      images: (json['images'] as List?)?.cast<String>() ?? [],
     );
   }
 
@@ -29,5 +31,6 @@ class ZoneModel extends Zone {
     'venueId': venueId,
     'name': name,
     'type': type,
+    'images': images,
   };
 }

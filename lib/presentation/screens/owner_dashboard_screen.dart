@@ -1,6 +1,11 @@
+import 'dart:typed_data';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:namma_turfy/core/services/storage_service.dart';
 import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
@@ -90,68 +95,106 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     final locationController = TextEditingController();
     final descController = TextEditingController();
     final priceController = TextEditingController();
+    List<XFile> pendingImages = [];
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create New Venue'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Venue Name'),
-              ),
-              TextField(
-                controller: locationController,
-                decoration: const InputDecoration(labelText: 'Location (Area)'),
-              ),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 2,
-              ),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Starting Price/hr (₹)',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Create New Venue'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Venue Name'),
                 ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(labelText: 'Location (Area)'),
+                ),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 2,
+                ),
+                TextField(
+                  controller: priceController,
+                  decoration: const InputDecoration(labelText: 'Starting Price/hr (₹)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                _ImagePickerSection(
+                  existingUrls: const [],
+                  pendingImages: pendingImages,
+                  onPickImages: () async {
+                    final picked = await StorageService.pickImages();
+                    if (picked.isNotEmpty) {
+                      setDialogState(() => pendingImages = [...pendingImages, ...picked]);
+                    }
+                  },
+                  onRemovePending: (i) => setDialogState(
+                    () => pendingImages = [...pendingImages]..removeAt(i),
+                  ),
+                  onRemoveExisting: null,
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDialogState(() => isSaving = true);
+                      try {
+                        final venueId = 'venue_${DateTime.now().millisecondsSinceEpoch}';
+                        final uploadedUrls = await StorageService.uploadVenueImages(
+                          venueId, pendingImages,
+                        );
+                        final newVenue = Venue(
+                          id: venueId,
+                          ownerId: ownerId,
+                          name: nameController.text,
+                          location: locationController.text,
+                          city: 'Vijayapura',
+                          latitude: 17.3297,
+                          longitude: 75.7181,
+                          type: 'Cricket',
+                          rating: 4.0,
+                          description: descController.text,
+                          pricePerHour: double.tryParse(priceController.text) ?? 0.0,
+                          sportsTypes: const ['Cricket'],
+                          availableHours: const ['06:00', '22:00'],
+                          images: uploadedUrls,
+                        );
+                        await ref.read(venueRepositoryProvider).saveVenue(newVenue);
+                        ref.invalidate(ownerVenueProvider);
+                        if (context.mounted) Navigator.pop(context);
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Create'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newVenue = Venue(
-                id: 'venue_${DateTime.now().millisecondsSinceEpoch}',
-                ownerId: ownerId,
-                name: nameController.text,
-                location: locationController.text,
-                city: 'Vijayapura',
-                latitude: 17.3297,
-                longitude: 75.7181,
-                type: 'Cricket',
-                rating: 4.0,
-                description: descController.text,
-                pricePerHour: double.tryParse(priceController.text) ?? 0.0,
-                sportsTypes: const ['Cricket'],
-                availableHours: const ['06:00', '22:00'],
-              );
-              ref.read(venueRepositoryProvider).saveVenue(newVenue).then((_) {
-                ref.invalidate(ownerVenueProvider);
-                if (context.mounted) Navigator.pop(context);
-              });
-            },
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
   }
@@ -222,96 +265,185 @@ class _VenueManager extends ConsumerWidget {
     final nameController = TextEditingController(text: venue.name);
     final locationController = TextEditingController(text: venue.location);
     final descController = TextEditingController(text: venue.description);
-    final priceController = TextEditingController(
-      text: venue.pricePerHour.toString(),
-    );
+    final priceController = TextEditingController(text: venue.pricePerHour.toString());
+    List<String> existingUrls = List.from(venue.images);
+    List<XFile> pendingImages = [];
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Venue'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: locationController,
-                decoration: const InputDecoration(labelText: 'Location'),
-              ),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 2,
-              ),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(labelText: 'Price/hr (₹)'),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Venue'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                ),
+                TextField(
+                  controller: locationController,
+                  decoration: const InputDecoration(labelText: 'Location'),
+                ),
+                TextField(
+                  controller: descController,
+                  decoration: const InputDecoration(labelText: 'Description'),
+                  maxLines: 2,
+                ),
+                TextField(
+                  controller: priceController,
+                  decoration: const InputDecoration(labelText: 'Price/hr (₹)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                _ImagePickerSection(
+                  existingUrls: existingUrls,
+                  pendingImages: pendingImages,
+                  onPickImages: () async {
+                    final picked = await StorageService.pickImages();
+                    if (picked.isNotEmpty) {
+                      setDialogState(() => pendingImages = [...pendingImages, ...picked]);
+                    }
+                  },
+                  onRemovePending: (i) => setDialogState(
+                    () => pendingImages = [...pendingImages]..removeAt(i),
+                  ),
+                  onRemoveExisting: (i) async {
+                    await StorageService.deleteImage(existingUrls[i]);
+                    setDialogState(() => existingUrls = [...existingUrls]..removeAt(i));
+                  },
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDialogState(() => isSaving = true);
+                      try {
+                        final newUrls = await StorageService.uploadVenueImages(
+                          venue.id, pendingImages,
+                        );
+                        final updated = venue.copyWith(
+                          name: nameController.text,
+                          location: locationController.text,
+                          description: descController.text,
+                          pricePerHour: double.tryParse(priceController.text) ?? venue.pricePerHour,
+                          images: [...existingUrls, ...newUrls],
+                        );
+                        await ref.read(venueRepositoryProvider).saveVenue(updated);
+                        ref.invalidate(ownerVenueProvider);
+                        if (context.mounted) Navigator.pop(context);
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Update'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final updated = venue.copyWith(
-                name: nameController.text,
-                location: locationController.text,
-                description: descController.text,
-                pricePerHour:
-                    double.tryParse(priceController.text) ?? venue.pricePerHour,
-              );
-              ref.read(venueRepositoryProvider).saveVenue(updated).then((_) {
-                ref.invalidate(ownerVenueProvider);
-                if (context.mounted) Navigator.pop(context);
-              });
-            },
-            child: const Text('Update'),
-          ),
-        ],
       ),
     );
   }
 
   void _showAddZoneDialog(BuildContext context, WidgetRef ref, String venueId) {
     final nameController = TextEditingController();
+    List<XFile> pendingImages = [];
+    bool isSaving = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Zone'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            labelText: 'Zone Name (e.g. Pitch A)',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add Zone'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Zone Name (e.g. Pitch A)',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _ImagePickerSection(
+                  existingUrls: const [],
+                  pendingImages: pendingImages,
+                  onPickImages: () async {
+                    final picked = await StorageService.pickImages();
+                    if (picked.isNotEmpty) {
+                      setDialogState(() => pendingImages = [...pendingImages, ...picked]);
+                    }
+                  },
+                  onRemovePending: (i) => setDialogState(
+                    () => pendingImages = [...pendingImages]..removeAt(i),
+                  ),
+                  onRemoveExisting: null,
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      setDialogState(() => isSaving = true);
+                      try {
+                        final zoneId = 'zone_${DateTime.now().millisecondsSinceEpoch}';
+                        final imageUrls = await StorageService.uploadZoneImages(
+                          zoneId, pendingImages,
+                        );
+                        final newZone = Zone(
+                          id: zoneId,
+                          venueId: venueId,
+                          name: nameController.text,
+                          type: 'Cricket',
+                          images: imageUrls,
+                        );
+                        await ref.read(venueRepositoryProvider).saveZone(newZone);
+                        if (context.mounted) Navigator.pop(context);
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Add'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newZone = Zone(
-                id: 'zone_${DateTime.now().millisecondsSinceEpoch}',
-                venueId: venueId,
-                name: nameController.text,
-                type: 'Cricket',
-              );
-              ref.read(venueRepositoryProvider).saveZone(newZone);
-              Navigator.pop(context);
-            },
-            child: const Text('Add'),
-          ),
-        ],
       ),
     );
   }
@@ -1125,6 +1257,134 @@ class _OwnerDatePicker extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Reusable image picker section for dialogs.
+/// Shows existing URL thumbnails + pending XFile thumbnails + add button.
+class _ImagePickerSection extends StatelessWidget {
+  final List<String> existingUrls;
+  final List<XFile> pendingImages;
+  final VoidCallback onPickImages;
+  final void Function(int index)? onRemovePending;
+  final void Function(int index)? onRemoveExisting;
+
+  const _ImagePickerSection({
+    required this.existingUrls,
+    required this.pendingImages,
+    required this.onPickImages,
+    this.onRemovePending,
+    this.onRemoveExisting,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImages = existingUrls.isNotEmpty || pendingImages.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('Photos', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: onPickImages,
+              icon: const Icon(Icons.add_photo_alternate, size: 18),
+              label: const Text('Add Photos'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+          ],
+        ),
+        if (hasImages)
+          SizedBox(
+            height: 90,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                // Existing URLs
+                for (int i = 0; i < existingUrls.length; i++)
+                  _ImageThumb(
+                    onRemove: onRemoveExisting != null
+                        ? () => onRemoveExisting!(i)
+                        : null,
+                    child: CachedNetworkImage(
+                      imageUrl: existingUrls[i],
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) =>
+                          const Icon(Icons.broken_image),
+                    ),
+                  ),
+                // Pending (local) images
+                for (int i = 0; i < pendingImages.length; i++)
+                  _ImageThumb(
+                    onRemove: onRemovePending != null
+                        ? () => onRemovePending!(i)
+                        : null,
+                    child: FutureBuilder<Uint8List>(
+                      future: pendingImages[i].readAsBytes(),
+                      builder: (ctx, snap) => snap.hasData
+                          ? Image.memory(snap.data!, fit: BoxFit.cover)
+                          : const Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+              ],
+            ),
+          )
+        else
+          Container(
+            height: 70,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: Text('No photos yet', style: TextStyle(color: Colors.grey)),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ImageThumb extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onRemove;
+
+  const _ImageThumb({required this.child, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(width: 80, height: 80, child: child),
+          ),
+          if (onRemove != null)
+            Positioned(
+              top: 2,
+              right: 2,
+              child: GestureDetector(
+                onTap: onRemove,
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: const Icon(Icons.close, size: 14, color: Colors.white),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

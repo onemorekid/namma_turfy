@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Venue images — public read, authenticated write
+    match /venues/{venueId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    // Zone images — public read, authenticated write
+    match /zones/{zoneId}/{fileName} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
