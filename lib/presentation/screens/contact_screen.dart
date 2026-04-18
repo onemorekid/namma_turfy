@@ -21,18 +21,16 @@ class ContactScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'We\'re here to help',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
             'Reach out to the right team and we\'ll get back to you.',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 32),
           _ContactCard(
@@ -119,10 +117,7 @@ class _ContactCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                     const SizedBox(height: 6),
                     Text(

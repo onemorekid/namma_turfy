@@ -23,11 +23,15 @@ class PlayerBookingsScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.sports_soccer, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text('No bookings yet',
-                      style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  Text(
+                    'No bookings yet',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
                   SizedBox(height: 8),
-                  Text('Book a venue to get started!',
-                      style: TextStyle(color: Colors.grey)),
+                  Text(
+                    'Book a venue to get started!',
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 ],
               ),
             );
@@ -85,7 +89,9 @@ class _BookingCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -105,58 +111,71 @@ class _BookingCard extends StatelessWidget {
 
               // ── Location ─────────────────────────────────────────────
               if (booking.venueLocation != null)
-                Row(children: [
-                  const Icon(Icons.location_on,
-                      size: 14, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      booking.venueLocation!,
-                      style: const TextStyle(
-                          fontSize: 13, color: Colors.grey),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        booking.venueLocation!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
 
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
 
               // ── Date + slots + amount ────────────────────────────────
-              Row(children: [
-                const Icon(Icons.calendar_today,
-                    size: 14, color: Colors.grey),
-                const SizedBox(width: 6),
-                Text(
-                  DateFormat('EEE, MMM dd, yyyy').format(booking.date),
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const Spacer(),
-                Text(
-                  '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ]),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('EEE, MMM dd, yyyy').format(booking.date),
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 4),
-              Row(children: [
-                const Icon(Icons.access_time, size: 14, color: Colors.grey),
-                const SizedBox(width: 6),
-                Text(
-                  '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}  •  '
-                  'Booking #$shortId',
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
-                ),
-                const Spacer(),
-                Text(
-                  'View receipt',
-                  style: TextStyle(
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}  •  '
+                    'Booking #$shortId',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'View receipt',
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.primary),
-                ),
-              ]),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

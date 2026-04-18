@@ -45,20 +45,27 @@ class ReceiptScreen extends ConsumerWidget {
                   Text(
                     booking.venueName ?? '',
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   if (booking.venueLocation != null) ...[
                     const SizedBox(height: 4),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.location_on,
-                            size: 14, color: Colors.grey),
+                        const Icon(
+                          Icons.location_on,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           booking.venueLocation!,
                           style: const TextStyle(
-                              fontSize: 13, color: Colors.grey),
+                            fontSize: 13,
+                            color: Colors.grey,
+                          ),
                         ),
                       ],
                     ),
@@ -104,8 +111,9 @@ class ReceiptScreen extends ConsumerWidget {
                           ),
                           _ReceiptRow(
                             label: 'Date',
-                            value: DateFormat('EEE, MMM dd, yyyy')
-                                .format(booking.date),
+                            value: DateFormat(
+                              'EEE, MMM dd, yyyy',
+                            ).format(booking.date),
                           ),
                           _ReceiptRow(
                             label: 'Slots Booked',
@@ -178,7 +186,8 @@ class _VenueInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAny = venue.generalInstructions != null ||
+    final hasAny =
+        venue.generalInstructions != null ||
         venue.cancellationPolicy != null ||
         venue.rules.isNotEmpty;
 
@@ -201,8 +210,7 @@ class _VenueInfoSection extends StatelessWidget {
               title: 'Cancellation Policy',
               body: venue.cancellationPolicy!,
             ),
-          if (venue.rules.isNotEmpty)
-            _RulesCard(rules: venue.rules),
+          if (venue.rules.isNotEmpty) _RulesCard(rules: venue.rules),
         ],
       ),
     );
@@ -229,18 +237,24 @@ class _InfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(icon, size: 18, color: Colors.grey[700]),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ]),
+            Row(
+              children: [
+                Icon(icon, size: 18, color: Colors.grey[700]),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            Text(body,
-                style: const TextStyle(fontSize: 13, color: Colors.black87)),
+            Text(
+              body,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
           ],
         ),
       ),
@@ -261,30 +275,40 @@ class _RulesCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.rule, size: 18, color: Colors.grey[700]),
-              const SizedBox(width: 8),
-              const Text(
-                'Venue Rules',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ]),
+            Row(
+              children: [
+                Icon(Icons.rule, size: 18, color: Colors.grey[700]),
+                const SizedBox(width: 8),
+                const Text(
+                  'Venue Rules',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
-            ...rules.map((rule) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('• ',
-                          style: TextStyle(fontSize: 13, color: Colors.grey)),
-                      Expanded(
-                        child: Text(rule,
-                            style: const TextStyle(
-                                fontSize: 13, color: Colors.black87)),
+            ...rules.map(
+              (rule) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '• ',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    Expanded(
+                      child: Text(
+                        rule,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ],
-                  ),
-                )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),

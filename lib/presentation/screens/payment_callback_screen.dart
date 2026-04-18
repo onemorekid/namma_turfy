@@ -32,8 +32,7 @@ class PaymentCallbackScreen extends ConsumerStatefulWidget {
       _PaymentCallbackScreenState();
 }
 
-class _PaymentCallbackScreenState
-    extends ConsumerState<PaymentCallbackScreen> {
+class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
   String _status = 'Confirming your payment…';
   bool _failed = false;
 
@@ -77,15 +76,15 @@ class _PaymentCallbackScreenState
       final result = await FirebaseFunctions.instance
           .httpsCallable('verifyAndBook')
           .call({
-        'razorpayOrderId': orderId,
-        'razorpayPaymentId': paymentId,
-        'razorpaySignature': signature,
-        'playerId': meta['playerId'],
-        'venueId': meta['venueId'],
-        'zoneId': meta['zoneId'],
-        'slotIds': meta['slotIds'],
-        if (meta['couponCode'] != null) 'couponCode': meta['couponCode'],
-      });
+            'razorpayOrderId': orderId,
+            'razorpayPaymentId': paymentId,
+            'razorpaySignature': signature,
+            'playerId': meta['playerId'],
+            'venueId': meta['venueId'],
+            'zoneId': meta['zoneId'],
+            'slotIds': meta['slotIds'],
+            if (meta['couponCode'] != null) 'couponCode': meta['couponCode'],
+          });
 
       final bookingId =
           (Map<String, dynamic>.from(result.data as Map))['bookingId']
@@ -113,13 +112,18 @@ class _PaymentCallbackScreenState
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline,
-                        size: 64, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 16),
                     const Text(
                       'Booking Error',
                       style: TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -143,8 +147,7 @@ class _PaymentCallbackScreenState
               : Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(
-                        color: Color(0xFF35CA67)),
+                    const CircularProgressIndicator(color: Color(0xFF35CA67)),
                     const SizedBox(height: 24),
                     Text(
                       _status,

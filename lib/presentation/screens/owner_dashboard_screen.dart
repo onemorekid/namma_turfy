@@ -29,15 +29,19 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final venueAsync = ref.watch(ownerVenueProvider);
     final user = ref.watch(currentUserProvider);
+    final venueAsync = ref.watch(ownerVenueProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Owner Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Owner Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () =>
+                ref.read(authControllerProvider.notifier).signOut(),
+          ),
+        ],
       ),
       drawer: const AppDrawer(),
       body: venueAsync.when(
@@ -113,7 +117,9 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                 ),
                 TextField(
                   controller: locationController,
-                  decoration: const InputDecoration(labelText: 'Location (Area)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Location (Area)',
+                  ),
                 ),
                 TextField(
                   controller: descController,
@@ -122,7 +128,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                 ),
                 TextField(
                   controller: priceController,
-                  decoration: const InputDecoration(labelText: 'Starting Price/hr (₹)'),
+                  decoration: const InputDecoration(labelText: 'Price/hr (₹)'),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
@@ -132,7 +138,9 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                   onPickImages: () async {
                     final picked = await StorageService.pickImages();
                     if (picked.isNotEmpty) {
-                      setDialogState(() => pendingImages = [...pendingImages, ...picked]);
+                      setDialogState(
+                        () => pendingImages = [...pendingImages, ...picked],
+                      );
                     }
                   },
                   onRemovePending: (i) => setDialogState(
@@ -154,10 +162,13 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                   : () async {
                       setDialogState(() => isSaving = true);
                       try {
-                        final venueId = 'venue_${DateTime.now().millisecondsSinceEpoch}';
-                        final uploadedUrls = await StorageService.uploadVenueImages(
-                          venueId, pendingImages,
-                        );
+                        final venueId =
+                            'venue_${DateTime.now().millisecondsSinceEpoch}';
+                        final uploadedUrls =
+                            await StorageService.uploadVenueImages(
+                              venueId,
+                              pendingImages,
+                            );
                         final newVenue = Venue(
                           id: venueId,
                           ownerId: ownerId,
@@ -169,27 +180,37 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                           type: 'Cricket',
                           rating: 4.0,
                           description: descController.text,
-                          pricePerHour: double.tryParse(priceController.text) ?? 0.0,
+                          pricePerHour:
+                              double.tryParse(priceController.text) ?? 0.0,
                           sportsTypes: const ['Cricket'],
                           availableHours: const ['06:00', '22:00'],
                           images: uploadedUrls,
                         );
-                        await ref.read(venueRepositoryProvider).saveVenue(newVenue);
+                        await ref
+                            .read(venueRepositoryProvider)
+                            .saveVenue(newVenue);
                         ref.invalidate(ownerVenueProvider);
                         if (context.mounted) Navigator.pop(context);
                       } catch (e) {
                         setDialogState(() => isSaving = false);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       }
                     },
               child: isSaving
                   ? const SizedBox(
-                      width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Create'),
             ),
@@ -265,7 +286,9 @@ class _VenueManager extends ConsumerWidget {
     final nameController = TextEditingController(text: venue.name);
     final locationController = TextEditingController(text: venue.location);
     final descController = TextEditingController(text: venue.description);
-    final priceController = TextEditingController(text: venue.pricePerHour.toString());
+    final priceController = TextEditingController(
+      text: venue.pricePerHour.toString(),
+    );
     List<String> existingUrls = List.from(venue.images);
     List<XFile> pendingImages = [];
     bool isSaving = false;
@@ -304,7 +327,9 @@ class _VenueManager extends ConsumerWidget {
                   onPickImages: () async {
                     final picked = await StorageService.pickImages();
                     if (picked.isNotEmpty) {
-                      setDialogState(() => pendingImages = [...pendingImages, ...picked]);
+                      setDialogState(
+                        () => pendingImages = [...pendingImages, ...picked],
+                      );
                     }
                   },
                   onRemovePending: (i) => setDialogState(
@@ -312,7 +337,9 @@ class _VenueManager extends ConsumerWidget {
                   ),
                   onRemoveExisting: (i) async {
                     await StorageService.deleteImage(existingUrls[i]);
-                    setDialogState(() => existingUrls = [...existingUrls]..removeAt(i));
+                    setDialogState(
+                      () => existingUrls = [...existingUrls]..removeAt(i),
+                    );
                   },
                 ),
               ],
@@ -330,31 +357,43 @@ class _VenueManager extends ConsumerWidget {
                       setDialogState(() => isSaving = true);
                       try {
                         final newUrls = await StorageService.uploadVenueImages(
-                          venue.id, pendingImages,
+                          venue.id,
+                          pendingImages,
                         );
                         final updated = venue.copyWith(
                           name: nameController.text,
                           location: locationController.text,
                           description: descController.text,
-                          pricePerHour: double.tryParse(priceController.text) ?? venue.pricePerHour,
+                          pricePerHour:
+                              double.tryParse(priceController.text) ??
+                              venue.pricePerHour,
                           images: [...existingUrls, ...newUrls],
                         );
-                        await ref.read(venueRepositoryProvider).saveVenue(updated);
+                        await ref
+                            .read(venueRepositoryProvider)
+                            .saveVenue(updated);
                         ref.invalidate(ownerVenueProvider);
                         if (context.mounted) Navigator.pop(context);
                       } catch (e) {
                         setDialogState(() => isSaving = false);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       }
                     },
               child: isSaving
                   ? const SizedBox(
-                      width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Update'),
             ),
@@ -391,7 +430,9 @@ class _VenueManager extends ConsumerWidget {
                   onPickImages: () async {
                     final picked = await StorageService.pickImages();
                     if (picked.isNotEmpty) {
-                      setDialogState(() => pendingImages = [...pendingImages, ...picked]);
+                      setDialogState(
+                        () => pendingImages = [...pendingImages, ...picked],
+                      );
                     }
                   },
                   onRemovePending: (i) => setDialogState(
@@ -413,9 +454,11 @@ class _VenueManager extends ConsumerWidget {
                   : () async {
                       setDialogState(() => isSaving = true);
                       try {
-                        final zoneId = 'zone_${DateTime.now().millisecondsSinceEpoch}';
+                        final zoneId =
+                            'zone_${DateTime.now().millisecondsSinceEpoch}';
                         final imageUrls = await StorageService.uploadZoneImages(
-                          zoneId, pendingImages,
+                          zoneId,
+                          pendingImages,
                         );
                         final newZone = Zone(
                           id: zoneId,
@@ -424,21 +467,30 @@ class _VenueManager extends ConsumerWidget {
                           type: 'Cricket',
                           images: imageUrls,
                         );
-                        await ref.read(venueRepositoryProvider).saveZone(newZone);
+                        await ref
+                            .read(venueRepositoryProvider)
+                            .saveZone(newZone);
                         if (context.mounted) Navigator.pop(context);
                       } catch (e) {
                         setDialogState(() => isSaving = false);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
                           );
                         }
                       }
                     },
               child: isSaving
                   ? const SizedBox(
-                      width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Add'),
             ),
@@ -456,7 +508,9 @@ class _ZoneItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(ownerSelectedDateProvider);
-    final slotsAsync = ref.watch(zoneSlotsFamily((zoneId: zone.id, date: selectedDate)));
+    final slotsAsync = ref.watch(
+      zoneSlotsFamily((zoneId: zone.id, date: selectedDate)),
+    );
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -591,8 +645,8 @@ class _ZoneItem extends ConsumerWidget {
                                     fontSize: 10,
                                     decoration:
                                         slot.status != SlotStatus.available
-                                            ? TextDecoration.lineThrough
-                                            : null,
+                                        ? TextDecoration.lineThrough
+                                        : null,
                                   ),
                                 ),
                               ),
@@ -761,8 +815,9 @@ class _ZoneItem extends ConsumerWidget {
                           endTime.minute,
                         );
                         while (current.isBefore(dayEnd)) {
-                          final slotEnd =
-                              current.add(Duration(minutes: duration));
+                          final slotEnd = current.add(
+                            Duration(minutes: duration),
+                          );
                           slots.add(
                             Slot(
                               id: 'slot_${zoneId}_${current.millisecondsSinceEpoch}',
@@ -794,7 +849,8 @@ class _ZoneItem extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                  'Failed to generate slots: ${e.toString()}'),
+                                'Failed to generate slots: ${e.toString()}',
+                              ),
                               backgroundColor: Colors.red,
                             ),
                           );
@@ -806,7 +862,9 @@ class _ZoneItem extends ConsumerWidget {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Generate'),
             ),
@@ -1287,7 +1345,10 @@ class _ImagePickerSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text('Photos', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const Text(
+              'Photos',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
             const Spacer(),
             TextButton.icon(
               onPressed: onPickImages,
@@ -1344,7 +1405,10 @@ class _ImagePickerSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Center(
-              child: Text('No photos yet', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'No photos yet',
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
           ),
       ],

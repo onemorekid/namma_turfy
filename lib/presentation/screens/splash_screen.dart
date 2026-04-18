@@ -10,15 +10,9 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.sports_soccer,
-              size: 80,
-              color: Color(0xFF35CA67),
-            ),
+            Icon(Icons.sports_soccer, size: 80, color: Color(0xFF35CA67)),
             SizedBox(height: 24),
-            CircularProgressIndicator(
-              color: Color(0xFF35CA67),
-            ),
+            CircularProgressIndicator(color: Color(0xFF35CA67)),
           ],
         ),
       ),

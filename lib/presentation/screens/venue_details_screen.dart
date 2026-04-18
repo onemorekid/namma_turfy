@@ -43,10 +43,10 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
 
     final selectedSlots = ref.read(selectedSlotsProvider);
     final venue = ref.read(venueProvider(widget.venueId)).value;
-    
+
     debugPrint('[_onBookNow] selectedSlots count: ${selectedSlots.length}');
     debugPrint('[_onBookNow] venue is null: ${venue == null}');
-    
+
     if (selectedSlots.isEmpty || venue == null) {
       debugPrint('[_onBookNow] Returning early: empty slots or null venue');
       return;
@@ -71,8 +71,7 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
       debugPrint('[_onBookNow] Lock failed, showing snackbar');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-              'One or more slots were just taken. Please reselect.'),
+          content: Text('One or more slots were just taken. Please reselect.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -82,11 +81,14 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
     }
 
     debugPrint('[_onBookNow] Navigating to checkout');
-    context.push('/checkout', extra: {
-      'venue': venue,
-      'slots': selectedSlots,
-      'lockedByUserId': user.id,
-    });
+    context.go(
+      '/checkout',
+      extra: {
+        'venue': venue,
+        'slots': selectedSlots,
+        'lockedByUserId': user.id,
+      },
+    );
   }
 
   @override
@@ -98,7 +100,9 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
     final selectedSlots = ref.watch(selectedSlotsProvider);
     final user = ref.watch(currentUserProvider);
 
-    debugPrint('[VenueDetailsScreen] build: user=${user?.id}, slots=${selectedSlots.length}, isLocking=$_isLocking');
+    debugPrint(
+      '[VenueDetailsScreen] build: user=${user?.id}, slots=${selectedSlots.length}, isLocking=$_isLocking',
+    );
     ref.listen(venueZonesProvider(widget.venueId), (prev, next) {
       next.whenData((zones) {
         if (ref.read(selectedZoneIdProvider) == null && zones.isNotEmpty) {
@@ -354,7 +358,9 @@ class _SlotGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
-    final slotsAsync = ref.watch(zoneSlotsFamily((zoneId: zoneId, date: selectedDate)));
+    final slotsAsync = ref.watch(
+      zoneSlotsFamily((zoneId: zoneId, date: selectedDate)),
+    );
     final selectedSlots = ref.watch(selectedSlotsProvider);
 
     return slotsAsync.when(
@@ -498,7 +504,9 @@ class _StickyFooter extends StatelessWidget {
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                   : const Text('Book Now'),
             ),

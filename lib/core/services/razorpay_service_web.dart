@@ -60,8 +60,8 @@ class RazorpayServiceImpl implements RazorpayService {
 
     final successCb =
         ((JSString paymentId, JSString orderId, JSString signature) {
-      successFn?.call(paymentId.toDart, orderId.toDart, signature.toDart);
-    }).toJS;
+          successFn?.call(paymentId.toDart, orderId.toDart, signature.toDart);
+        }).toJS;
 
     final errorCb = ((JSNumber code, JSString message) {
       errorFn?.call(code.toDartDouble.toInt(), message.toDart);

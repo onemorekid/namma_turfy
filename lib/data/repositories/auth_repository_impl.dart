@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:namma_turfy/data/models/user_model.dart';
 import 'package:namma_turfy/domain/entities/user.dart';
@@ -41,16 +41,16 @@ class AuthRepositoryImpl implements AuthRepository {
         .doc(firebaseUser.uid)
         .snapshots()
         .listen((snapshot) async {
-      if (!snapshot.exists) {
-        final newUser = _mapInitialUser(firebaseUser);
-        await updateUser(newUser);
-        return;
-      }
-      final data = snapshot.data()!;
-      data['id'] = snapshot.id;
-      _currentUser = UserModel.fromJson(data);
-      _userController.add(_currentUser);
-    });
+          if (!snapshot.exists) {
+            final newUser = _mapInitialUser(firebaseUser);
+            await updateUser(newUser);
+            return;
+          }
+          final data = snapshot.data()!;
+          data['id'] = snapshot.id;
+          _currentUser = UserModel.fromJson(data);
+          _userController.add(_currentUser);
+        });
   }
 
   UserEntity _mapInitialUser(User user) {
@@ -74,16 +74,38 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return;
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
+    try {
+      GoogleSignInAccount? googleUser;
+      if (kIsWeb) {
+        // Attempt silent sign-in first as recommended for web.
+        debugPrint('[AuthRepository] Attempting silent sign-in for web...');
+        googleUser = await _googleSignIn.signInSilently();
+      }
 
-    final AuthCredential credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-      accessToken: googleAuth.accessToken,
-    );
-    await _firebaseAuth.signInWithCredential(credential);
+      if (googleUser == null) {
+        debugPrint('[AuthRepository] Prompting user for sign-in...');
+        googleUser = await _googleSignIn.signIn();
+      }
+
+      if (googleUser == null) {
+        debugPrint('[AuthRepository] Sign-in cancelled by user');
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      debugPrint('[AuthRepository] Fetched googleAuth tokens');
+
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
+      );
+      await _firebaseAuth.signInWithCredential(credential);
+      debugPrint('[AuthRepository] Firebase signInWithCredential success');
+    } catch (e) {
+      debugPrint('[AuthRepository] signInWithGoogle failed: $e');
+      rethrow;
+    }
   }
 
   @override

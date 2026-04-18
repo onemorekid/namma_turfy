@@ -137,28 +137,36 @@ class VenueRepositoryImpl implements VenueRepository {
   @override
   Stream<List<Slot>> watchSlots(String zoneId, {DateTime? date}) {
     debugPrint('Watching slots for zone: $zoneId, date: $date');
-    Query query = _firestore.collection('slots').where('zoneId', isEqualTo: zoneId);
+    Query query = _firestore
+        .collection('slots')
+        .where('zoneId', isEqualTo: zoneId);
 
     if (date != null) {
       final startOfDay = DateTime(date.year, date.month, date.day);
       final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
       debugPrint('Filter range: $startOfDay to $endOfDay');
       query = query
-          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay));
+          .where(
+            'startTime',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+          )
+          .where(
+            'startTime',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+          );
     }
 
-    return query.snapshots().map(
-          (snapshot) {
-            debugPrint('Received ${snapshot.docs.length} slots from Firestore');
-            return snapshot.docs.map((doc) => SlotModel.fromSnapshot(doc)).toList();
-          },
-        );
+    return query.snapshots().map((snapshot) {
+      debugPrint('Received ${snapshot.docs.length} slots from Firestore');
+      return snapshot.docs.map((doc) => SlotModel.fromSnapshot(doc)).toList();
+    });
   }
 
   @override
   Future<void> saveSlot(Slot slot) async {
-    debugPrint('Saving slot: ${slot.id} for zone: ${slot.zoneId} at ${slot.startTime}');
+    debugPrint(
+      'Saving slot: ${slot.id} for zone: ${slot.zoneId} at ${slot.startTime}',
+    );
     final model = SlotModel(
       id: slot.id,
       zoneId: slot.zoneId,
@@ -180,10 +188,7 @@ class VenueRepositoryImpl implements VenueRepository {
     // Firestore batches are capped at 500 operations. Split into chunks.
     const chunkSize = 499;
     for (int i = 0; i < slots.length; i += chunkSize) {
-      final chunk = slots.sublist(
-        i,
-        (i + chunkSize).clamp(0, slots.length),
-      );
+      final chunk = slots.sublist(i, (i + chunkSize).clamp(0, slots.length));
       final batch = _firestore.batch();
       for (final slot in chunk) {
         final model = SlotModel(

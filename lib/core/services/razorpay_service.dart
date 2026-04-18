@@ -1,5 +1,5 @@
-typedef OnPaymentSuccess = void Function(
-    String paymentId, String orderId, String signature);
+typedef OnPaymentSuccess =
+    void Function(String paymentId, String orderId, String signature);
 typedef OnPaymentError = void Function(int? code, String? message);
 typedef OnExternalWallet = void Function(String? walletName);
 

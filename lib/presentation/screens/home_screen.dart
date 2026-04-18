@@ -77,7 +77,10 @@ class HomeScreen extends ConsumerWidget {
             child: venuesAsync.when(
               data: (venues) {
                 // Derive categories dynamically from data
-                final allSports = {'All', ...venues.expand((v) => v.sportsTypes)};
+                final allSports = {
+                  'All',
+                  ...venues.expand((v) => v.sportsTypes),
+                };
                 final categories = [
                   'All',
                   ...allSports.where((s) => s != 'All').toList()..sort(),
@@ -184,7 +187,10 @@ class HomeScreen extends ConsumerWidget {
                                     venue.longitude,
                                   );
                                 }
-                                return _VenueCard(venue: venue, distance: distance);
+                                return _VenueCard(
+                                  venue: venue,
+                                  distance: distance,
+                                );
                               },
                             ),
                     ),
@@ -240,7 +246,10 @@ class _TimeDiscovery extends ConsumerWidget {
 class _CategoryFilter extends ConsumerWidget {
   final List<String> categories;
   final String selectedCategory;
-  const _CategoryFilter({required this.categories, required this.selectedCategory});
+  const _CategoryFilter({
+    required this.categories,
+    required this.selectedCategory,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -298,7 +307,9 @@ class _CityPicker extends ConsumerWidget {
                         ? const Icon(Icons.check, color: Color(0xFF35CA67))
                         : null,
                     onTap: () {
-                      ref.read(authRepositoryProvider).updateProfile(
+                      ref
+                          .read(authRepositoryProvider)
+                          .updateProfile(
                             name: user?.name ?? 'User',
                             preferredCity: city,
                           );
@@ -310,7 +321,9 @@ class _CityPicker extends ConsumerWidget {
                 ListTile(
                   title: const Text('Show All Cities'),
                   onTap: () {
-                    ref.read(authRepositoryProvider).updateProfile(
+                    ref
+                        .read(authRepositoryProvider)
+                        .updateProfile(
                           name: user?.name ?? 'User',
                           preferredCity: '',
                         );

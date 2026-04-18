@@ -25,7 +25,8 @@ class BookingModel extends Booking {
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
-    final charged = (json['discountedPrice'] as num?)?.toDouble() ??
+    final charged =
+        (json['discountedPrice'] as num?)?.toDouble() ??
         (json['totalPrice'] as num?)?.toDouble() ??
         0.0;
     return BookingModel(
@@ -38,10 +39,9 @@ class BookingModel extends Booking {
       createdAt: _parseDateTime(json['createdAt']),
       totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
       discountedPrice: (json['discountedPrice'] as num?)?.toDouble(),
-      platformCommission: (json['platformCommission'] as num?)?.toDouble() ??
-          charged * 0.05,
-      ownerPayout: (json['ownerPayout'] as num?)?.toDouble() ??
-          charged * 0.95,
+      platformCommission:
+          (json['platformCommission'] as num?)?.toDouble() ?? charged * 0.05,
+      ownerPayout: (json['ownerPayout'] as num?)?.toDouble() ?? charged * 0.95,
       venueName: json['venueName'] as String?,
       venueLocation: json['venueLocation'] as String?,
       razorpayOrderId: json['razorpayOrderId'] as String?,
@@ -62,8 +62,9 @@ class BookingModel extends Booking {
       data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();
     }
     if (data['createdAt'] is Timestamp) {
-      data['createdAt'] =
-          (data['createdAt'] as Timestamp).toDate().toIso8601String();
+      data['createdAt'] = (data['createdAt'] as Timestamp)
+          .toDate()
+          .toIso8601String();
     }
     return BookingModel.fromJson(data);
   }

@@ -14,7 +14,9 @@ final venueRepositoryProvider = Provider<VenueRepository>((ref) {
 
 final allVenuesProvider = StreamProvider<List<Venue>>((ref) {
   final user = ref.watch(currentUserProvider);
-  return ref.watch(venueRepositoryProvider).watchAllVenues(city: user?.preferredCity);
+  return ref
+      .watch(venueRepositoryProvider)
+      .watchAllVenues(city: user?.preferredCity);
 });
 
 final venuesProvider = allVenuesProvider;
@@ -23,10 +25,12 @@ final venueProvider = FutureProvider.family<Venue?, String>((ref, id) {
   return ref.watch(venueRepositoryProvider).getVenueById(id);
 });
 
-final venueZonesProvider =
-    StreamProvider.family<List<Zone>, String>((ref, venueId) {
-      return ref.watch(venueRepositoryProvider).watchZones(venueId);
-    });
+final venueZonesProvider = StreamProvider.family<List<Zone>, String>((
+  ref,
+  venueId,
+) {
+  return ref.watch(venueRepositoryProvider).watchZones(venueId);
+});
 
 // Use a distinct date provider for the owner dashboard to avoid side effects with the player view
 final ownerSelectedDateProvider =
@@ -42,11 +46,15 @@ class OwnerSelectedDateNotifier extends Notifier<DateTime> {
 
 /// A single slot stream provider parameterised by both zoneId and date.
 /// Usage: ref.watch(zoneSlotsFamily((zoneId: id, date: selectedDate)))
-final zoneSlotsFamily = StreamProvider.family<List<Slot>, ({String zoneId, DateTime date})>(
-  (ref, params) {
-    return ref.watch(venueRepositoryProvider).watchSlots(params.zoneId, date: params.date);
-  },
-);
+final zoneSlotsFamily =
+    StreamProvider.family<List<Slot>, ({String zoneId, DateTime date})>((
+      ref,
+      params,
+    ) {
+      return ref
+          .watch(venueRepositoryProvider)
+          .watchSlots(params.zoneId, date: params.date);
+    });
 
 /// ownerVenuesProvider — streams all venues owned by the current user.
 final ownerVenuesProvider = StreamProvider<List<Venue>>((ref) {
@@ -102,10 +110,9 @@ class AdminController extends AsyncNotifier<void> {
   Future<void> updateCommissionRate(String venueId, int rate) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await FirebaseFirestore.instance
-          .collection('venues')
-          .doc(venueId)
-          .update({'commissionRate': rate});
+      await FirebaseFirestore.instance.collection('venues').doc(venueId).update(
+        {'commissionRate': rate},
+      );
     });
   }
 }

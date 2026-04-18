@@ -78,8 +78,9 @@ void main() {
       mockAuthRepo = MockAuthRepository();
     });
 
-    testWidgets('Full Journey: Login -> Admin -> Owner -> Player',
-        (WidgetTester tester) async {
+    testWidgets('Full Journey: Login -> Admin -> Owner -> Player', (
+      WidgetTester tester,
+    ) async {
       app.main();
 
       // Wait for app to settle on the LoginScreen
@@ -107,11 +108,14 @@ void main() {
 
       // Assert we are on Admin Dashboard
       expect(find.text('Super-Admin Dashboard'), findsOneWidget);
-      
+
       // Tap Users tab
       await tester.tap(find.text('Users'));
       await tester.pumpAndSettle();
-      expect(find.text('Pralhad Patil'), findsWidgets); // Checking for our mock user
+      expect(
+        find.text('Pralhad Patil'),
+        findsWidgets,
+      ); // Checking for our mock user
 
       // 3. OWNER WORKFLOW
       // Open the drawer
@@ -166,7 +170,10 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Search for the newly created venue
-      await tester.enterText(find.byType(TextField).first, 'Namma Turf Premium');
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Namma Turf Premium',
+      );
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
       // Tap on the venue to open its details
@@ -177,7 +184,7 @@ void main() {
 
       // Find the available slot (represented by an un-crossed text or container)
       // and tap it to add to cart
-      final availableSlot = find.byType(GestureDetector).last; 
+      final availableSlot = find.byType(GestureDetector).last;
       await tester.tap(availableSlot);
       await tester.pumpAndSettle();
 
@@ -185,7 +192,7 @@ void main() {
       expect(find.text('Book Now'), findsWidgets);
       await tester.tap(find.text('Book Now').last);
       await tester.pumpAndSettle(const Duration(seconds: 2));
-      
+
       // We should now be on the Checkout screen
       expect(find.text('Confirm Booking'), findsWidgets);
     });

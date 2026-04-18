@@ -25,7 +25,7 @@ class Venue {
   // Owner bank details for weekly settlement payouts
   final String? ownerBankAccountNumber;
   final String? ownerBankIfsc;
-  final String? ownerBankName;         // account holder name
+  final String? ownerBankName; // account holder name
   // Razorpay Payout IDs (created once during onboarding, reused for payouts)
   final String? razorpayContactId;
   final String? razorpayFundAccountId;
@@ -109,11 +109,13 @@ class Venue {
       generalInstructions: generalInstructions ?? this.generalInstructions,
       cancellationPolicy: cancellationPolicy ?? this.cancellationPolicy,
       rules: rules ?? this.rules,
-      ownerBankAccountNumber: ownerBankAccountNumber ?? this.ownerBankAccountNumber,
+      ownerBankAccountNumber:
+          ownerBankAccountNumber ?? this.ownerBankAccountNumber,
       ownerBankIfsc: ownerBankIfsc ?? this.ownerBankIfsc,
       ownerBankName: ownerBankName ?? this.ownerBankName,
       razorpayContactId: razorpayContactId ?? this.razorpayContactId,
-      razorpayFundAccountId: razorpayFundAccountId ?? this.razorpayFundAccountId,
+      razorpayFundAccountId:
+          razorpayFundAccountId ?? this.razorpayFundAccountId,
     );
   }
 }

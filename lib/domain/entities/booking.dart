@@ -15,10 +15,10 @@ class Booking {
   final DateTime createdAt;
 
   // Pricing
-  final double totalPrice;        // amount player paid
-  final double? discountedPrice;  // after coupon (what razorpay charged)
+  final double totalPrice; // amount player paid
+  final double? discountedPrice; // after coupon (what razorpay charged)
   final double platformCommission; // 5% of discountedPrice
-  final double ownerPayout;        // discountedPrice - platformCommission
+  final double ownerPayout; // discountedPrice - platformCommission
 
   // Denormalized venue info (set at booking time for fast list rendering)
   final String? venueName;

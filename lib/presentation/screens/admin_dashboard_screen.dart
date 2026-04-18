@@ -27,10 +27,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       drawer: const AppDrawer(),
       body: IndexedStack(
         index: _selectedIndex,
-        children: const [
-          _VenuesManagement(),
-          _UsersManagement(),
-        ],
+        children: const [_VenuesManagement(), _UsersManagement()],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -76,27 +73,45 @@ class _VenuesManagement extends ConsumerWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(venue.name,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16)),
+                              Text(
+                                venue.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
                               const SizedBox(height: 2),
-                              Text(venue.location,
-                                  style: TextStyle(
-                                      color: Colors.grey[600], fontSize: 12)),
-                              Text('Owner ID: ${venue.ownerId.substring(0, 8)}...',
-                                  style: TextStyle(
-                                      color: Colors.grey[500], fontSize: 11)),
+                              Text(
+                                venue.location,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                'Owner ID: ${venue.ownerId.substring(0, 8)}...',
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 11,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         // Commission badge
                         GestureDetector(
-                          onTap: () => _showRateDialog(context, ref, venue.id,
-                              venue.name, rate),
+                          onTap: () => _showRateDialog(
+                            context,
+                            ref,
+                            venue.id,
+                            venue.name,
+                            rate,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 8),
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: _rateColor(rate).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
@@ -114,8 +129,11 @@ class _VenuesManagement extends ConsumerWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 4),
-                                Icon(Icons.edit,
-                                    size: 14, color: _rateColor(rate)),
+                                Icon(
+                                  Icons.edit,
+                                  size: 14,
+                                  color: _rateColor(rate),
+                                ),
                               ],
                             ),
                           ),
@@ -126,27 +144,35 @@ class _VenuesManagement extends ConsumerWidget {
                     Row(
                       children: [
                         // Suspension toggle
-                        const Text('Active',
-                            style: TextStyle(fontSize: 13)),
+                        const Text('Active', style: TextStyle(fontSize: 13)),
                         Switch(
                           value: !venue.isSuspended,
                           activeThumbColor: const Color(0xFF35CA67),
-                          activeTrackColor: const Color(0xFF35CA67).withValues(alpha: 0.5),
+                          activeTrackColor: const Color(
+                            0xFF35CA67,
+                          ).withValues(alpha: 0.5),
                           onChanged: (active) {
                             ref
                                 .read(venueRepositoryProvider)
-                                .saveVenue(venue.copyWith(
-                                    isSuspended: !active));
+                                .saveVenue(
+                                  venue.copyWith(isSuspended: !active),
+                                );
                           },
                         ),
                         const Spacer(),
                         TextButton.icon(
                           onPressed: () => _showRateDialog(
-                              context, ref, venue.id, venue.name, rate),
+                            context,
+                            ref,
+                            venue.id,
+                            venue.name,
+                            rate,
+                          ),
                           icon: const Icon(Icons.percent, size: 16),
                           label: const Text('Set Commission'),
                           style: TextButton.styleFrom(
-                              foregroundColor: Colors.red[800]),
+                            foregroundColor: Colors.red[800],
+                          ),
                         ),
                       ],
                     ),
@@ -169,10 +195,14 @@ class _VenuesManagement extends ConsumerWidget {
     return Colors.red;
   }
 
-  void _showRateDialog(BuildContext context, WidgetRef ref, String venueId,
-      String venueName, int currentRate) {
-    final controller =
-        TextEditingController(text: currentRate.toString());
+  void _showRateDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String venueId,
+    String venueName,
+    int currentRate,
+  ) {
+    final controller = TextEditingController(text: currentRate.toString());
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -217,8 +247,9 @@ class _VenuesManagement extends ConsumerWidget {
                   return ActionChip(
                     label: Text('$preset%'),
                     onPressed: () => controller.text = preset.toString(),
-                    backgroundColor:
-                        preset == currentRate ? const Color(0xFFE8F5E9) : null,
+                    backgroundColor: preset == currentRate
+                        ? const Color(0xFFE8F5E9)
+                        : null,
                   );
                 }).toList(),
               ),
@@ -232,8 +263,9 @@ class _VenuesManagement extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[800],
-                foregroundColor: Colors.white),
+              backgroundColor: Colors.red[800],
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
               final newRate = int.parse(controller.text);
@@ -243,8 +275,7 @@ class _VenuesManagement extends ConsumerWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(
-                      '$venueName commission updated to $newRate%'),
+                  content: Text('$venueName commission updated to $newRate%'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -281,10 +312,14 @@ class _UsersManagement extends ConsumerWidget {
                   backgroundImage: user.photoUrl != null
                       ? NetworkImage(user.photoUrl!)
                       : null,
-                  child: user.photoUrl == null ? const Icon(Icons.person) : null,
+                  child: user.photoUrl == null
+                      ? const Icon(Icons.person)
+                      : null,
                 ),
                 title: Text(user.name),
-                subtitle: Text('${user.email}\nRoles: ${user.roles.map((r) => r.name).join(', ')}'),
+                subtitle: Text(
+                  '${user.email}\nRoles: ${user.roles.map((r) => r.name).join(', ')}',
+                ),
                 isThreeLine: true,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -301,9 +336,9 @@ class _UsersManagement extends ConsumerWidget {
                         } else {
                           newRoles.remove(UserRole.owner);
                         }
-                        ref.read(authRepositoryProvider).updateUser(
-                              user.copyWith(roles: newRoles),
-                            );
+                        ref
+                            .read(authRepositoryProvider)
+                            .updateUser(user.copyWith(roles: newRoles));
                       },
                     ),
                   ],

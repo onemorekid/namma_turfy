@@ -12,7 +12,9 @@ class BookingRepositoryImpl implements BookingRepository {
   /// A slot can only be locked if it is currently `available`.
   @override
   Future<bool> lockSlots(List<Slot> slots, String userId) async {
-    debugPrint('[lockSlots] Started for user $userId, slots: ${slots.map((s) => s.id)}');
+    debugPrint(
+      '[lockSlots] Started for user $userId, slots: ${slots.map((s) => s.id)}',
+    );
     try {
       await _firestore.runTransaction((tx) async {
         final refs = slots
@@ -65,7 +67,9 @@ class BookingRepositoryImpl implements BookingRepository {
       for (final slot in slots) {
         final doc = await _firestore.collection('slots').doc(slot.id).get();
         if (!doc.exists) {
-          debugPrint('[BookingRepositoryImpl] verifyLocks: slot ${slot.id} document missing');
+          debugPrint(
+            '[BookingRepositoryImpl] verifyLocks: slot ${slot.id} document missing',
+          );
           return false;
         }
         final data = doc.data() as Map<String, dynamic>;
@@ -83,7 +87,9 @@ class BookingRepositoryImpl implements BookingRepository {
         }
         final expiryRaw = data['holdExpiry'];
         if (expiryRaw == null) {
-          debugPrint('[BookingRepositoryImpl] verifyLocks: slot ${slot.id} holdExpiry is null');
+          debugPrint(
+            '[BookingRepositoryImpl] verifyLocks: slot ${slot.id} holdExpiry is null',
+          );
           return false;
         }
         final expiry = expiryRaw is Timestamp
@@ -111,8 +117,7 @@ class BookingRepositoryImpl implements BookingRepository {
         .where('playerId', isEqualTo: playerId)
         .orderBy('date', descending: true)
         .snapshots()
-        .map((s) =>
-            s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
+        .map((s) => s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
   }
 
   @override
@@ -122,8 +127,7 @@ class BookingRepositoryImpl implements BookingRepository {
         .where('venueId', isEqualTo: venueId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) =>
-            s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
+        .map((s) => s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
   }
 
   @override
