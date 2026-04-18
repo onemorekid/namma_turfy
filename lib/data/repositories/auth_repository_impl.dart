@@ -16,6 +16,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     clientId: kIsWeb ? _serverClientId : null,
+    scopes: ['email', 'profile'],
   );
 
   final _userController = StreamController<UserEntity?>.broadcast();

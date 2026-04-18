@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/discovery_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
 import 'package:namma_turfy/presentation/widgets/app_drawer.dart';
+import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -365,17 +365,12 @@ class _VenueCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (venue.images.isNotEmpty)
-              CachedNetworkImage(
+              AppNetworkImage(
                 imageUrl: venue.images.first,
                 height: 180,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  height: 180,
-                  color: Colors.grey[100],
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (_, __, ___) => Container(
+                errorWidget: Container(
                   height: 180,
                   color: Colors.grey[200],
                   child: const Icon(Icons.image_not_supported, size: 60),

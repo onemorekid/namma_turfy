@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
+import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
 
 class VenueListScreen extends ConsumerStatefulWidget {
   const VenueListScreen({super.key});
@@ -102,31 +103,21 @@ class VenueCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (venue.images.isNotEmpty)
-              Image.network(
-                venue.images.first,
+              AppNetworkImage(
+                imageUrl: venue.images.first,
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  debugPrint('[VenueCard] Error loading image: $error');
-                  return const SizedBox(
-                    height: 150,
-                    child: Center(
-                      child: Icon(
-                        Icons.broken_image,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
+                errorWidget: const SizedBox(
+                  height: 150,
+                  child: Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      size: 50,
+                      color: Colors.grey,
                     ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return const SizedBox(
-                    height: 150,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                },
+                  ),
+                ),
               ),
             Padding(
               padding: const EdgeInsets.all(12.0),

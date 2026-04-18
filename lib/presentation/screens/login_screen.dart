@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in_web/google_sign_in_web.dart' as web;
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -39,6 +41,12 @@ class LoginScreen extends ConsumerWidget {
               const SizedBox(height: 64),
               if (authState.isLoading)
                 const CircularProgressIndicator(color: Color(0xFF35CA67))
+              else if (kIsWeb)
+                // Official Google-rendered button for Web (fixes FedCM/CORS warnings)
+                SizedBox(
+                  height: 50,
+                  child: web.renderButton(),
+                )
               else
                 SizedBox(
                   width: double.infinity,

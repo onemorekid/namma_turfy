@@ -32,21 +32,22 @@ class VenueModel extends Venue {
   });
 
   factory VenueModel.fromJson(Map<String, dynamic> json) {
-    // Robust image parsing: check both fields and merge them to avoid data loss
     final List<String> images = [];
-    if (json['images'] is List) {
-      images.addAll((json['images'] as List).cast<String>());
-    }
-    if (json['imageUrls'] is List) {
-      for (final url in (json['imageUrls'] as List).cast<String>()) {
-        if (!images.contains(url)) images.add(url);
+    
+    // Check various common field names for images
+    final imageFields = ['images', 'imageUrls', 'image_urls'];
+    for (final field in imageFields) {
+      if (json[field] is List) {
+        for (final item in (json[field] as List)) {
+          if (item is String && item.isNotEmpty && !images.contains(item)) {
+            images.add(item);
+          }
+        }
       }
     }
 
     if (images.isEmpty) {
       debugPrint('[VenueModel] WARNING: No images found for venue ${json['id']}');
-    } else {
-      debugPrint('[VenueModel] Found ${images.length} images for venue ${json['id']}');
     }
 
     return VenueModel(

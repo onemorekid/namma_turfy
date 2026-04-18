@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,6 +14,7 @@ import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
 import 'package:namma_turfy/presentation/widgets/app_drawer.dart';
+import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -1373,11 +1373,10 @@ class _ImagePickerSection extends StatelessWidget {
                     onRemove: onRemoveExisting != null
                         ? () => onRemoveExisting!(i)
                         : null,
-                    child: CachedNetworkImage(
+                    child: AppNetworkImage(
                       imageUrl: existingUrls[i],
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
-                          const Icon(Icons.broken_image),
+                      errorWidget: const Icon(Icons.broken_image),
                     ),
                   ),
                 // Pending (local) images

@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +8,7 @@ import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_detail_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
+import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
 
 class VenueDetailsScreen extends ConsumerStatefulWidget {
   final String venueId;
@@ -20,6 +20,14 @@ class VenueDetailsScreen extends ConsumerStatefulWidget {
 
 class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
   bool _isLocking = false;
+  final PageController _pageController = PageController();
+  int _currentImageIndex = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -120,15 +128,16 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
           }
 
           // Combine venue images with all zone images
-          final List<String> allImages = [...venue.images];
-          zonesAsync.whenData((zones) {
-            for (final zone in zones) {
-              allImages.addAll(zone.images);
-            }
-          });
+          final List<String> allImages = [
+            ...venue.images,
+            ...zonesAsync.maybeWhen(
+              data: (zones) => zones.expand((z) => z.images).toList(),
+              orElse: () => [],
+            ),
+          ];
 
           debugPrint(
-            '[VenueDetailsScreen] venue: ${venue.name}, total images: ${allImages.length} (venue: ${venue.images.length})',
+            '[VenueDetailsScreen] venue: ${venue.name}, total images: ${allImages.length}',
           );
 
           return Column(
@@ -137,25 +146,49 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
               if (allImages.isNotEmpty)
                 SizedBox(
                   height: 200,
-                  child: PageView.builder(
-                    itemCount: allImages.length,
-                    itemBuilder: (context, index) {
-                      debugPrint(
-                        '[VenueDetailsScreen] Loading image[$index]: ${allImages[index]}',
-                      );
-                      return CachedNetworkImage(
-                        imageUrl: allImages[index],
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const Center(child: CircularProgressIndicator()),
-                        errorWidget: (context, url, error) {
-                          debugPrint(
-                            '[VenueDetailsScreen] Error loading image: $error',
+                  child: Stack(
+                    children: [
+                      PageView.builder(
+                        controller: _pageController,
+                        onPageChanged: (index) =>
+                            setState(() => _currentImageIndex = index),
+                        itemCount: allImages.length,
+                        itemBuilder: (context, index) {
+                          return AppNetworkImage(
+                            imageUrl: allImages[index],
+                            fit: BoxFit.cover,
+                            errorWidget:
+                                const Icon(Icons.broken_image, size: 60),
                           );
-                          return const Icon(Icons.broken_image, size: 60);
                         },
-                      );
-                    },
+                      ),
+                      if (allImages.length > 1)
+                        Positioned(
+                          bottom: 12,
+                          left: 0,
+                          right: 0,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: allImages.asMap().entries.map((entry) {
+                              return Container(
+                                width: 8.0,
+                                height: 8.0,
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 4.0,
+                                ),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withAlpha(
+                                    _currentImageIndex == entry.key
+                                        ? 230
+                                        : 100,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                    ],
                   ),
                 )
               else
