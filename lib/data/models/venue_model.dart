@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 
 class VenueModel extends Venue {
@@ -31,9 +32,22 @@ class VenueModel extends Venue {
   });
 
   factory VenueModel.fromJson(Map<String, dynamic> json) {
-    // Debug logging to help identify why images might be missing
-    final imagesList =
-        (json['images'] as List?) ?? (json['imageUrls'] as List?);
+    // Robust image parsing: check both fields and merge them to avoid data loss
+    final List<String> images = [];
+    if (json['images'] is List) {
+      images.addAll((json['images'] as List).cast<String>());
+    }
+    if (json['imageUrls'] is List) {
+      for (final url in (json['imageUrls'] as List).cast<String>()) {
+        if (!images.contains(url)) images.add(url);
+      }
+    }
+
+    if (images.isEmpty) {
+      debugPrint('[VenueModel] WARNING: No images found for venue ${json['id']}');
+    } else {
+      debugPrint('[VenueModel] Found ${images.length} images for venue ${json['id']}');
+    }
 
     return VenueModel(
       id: json['id'] as String,
@@ -47,7 +61,7 @@ class VenueModel extends Venue {
       rating: (json['rating'] as num?)?.toDouble() ?? 4.5,
       description: json['description'] as String? ?? '',
       pricePerHour: (json['pricePerHour'] as num?)?.toDouble() ?? 0.0,
-      images: imagesList?.cast<String>() ?? [],
+      images: images,
       features: (json['features'] as List?)?.cast<String>() ?? [],
       sportsTypes: (json['sportsTypes'] as List?)?.cast<String>() ?? [],
       availableHours: (json['availableHours'] as List?)?.cast<String>() ?? [],
@@ -63,6 +77,7 @@ class VenueModel extends Venue {
       razorpayFundAccountId: json['razorpayFundAccountId'] as String?,
     );
   }
+
 
   factory VenueModel.fromSnapshot(DocumentSnapshot snap) {
     final data = snap.data() as Map<String, dynamic>? ?? {};

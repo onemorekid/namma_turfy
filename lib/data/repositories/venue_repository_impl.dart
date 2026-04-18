@@ -76,6 +76,7 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveVenue(Venue venue) async {
+    debugPrint('[VenueRepositoryImpl] saveVenue: ${venue.id}, images: ${venue.images.length}');
     final model = VenueModel(
       id: venue.id,
       ownerId: venue.ownerId,
@@ -94,6 +95,9 @@ class VenueRepositoryImpl implements VenueRepository {
       availableHours: venue.availableHours,
       isSuspended: venue.isSuspended,
       commissionRate: venue.commissionRate,
+      generalInstructions: venue.generalInstructions,
+      cancellationPolicy: venue.cancellationPolicy,
+      rules: venue.rules,
       ownerBankAccountNumber: venue.ownerBankAccountNumber,
       ownerBankIfsc: venue.ownerBankIfsc,
       ownerBankName: venue.ownerBankName,
@@ -120,12 +124,13 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveZone(Zone zone) async {
-    debugPrint('Saving zone: ${zone.id} - ${zone.name}');
+    debugPrint('[VenueRepositoryImpl] saveZone: ${zone.id}, images: ${zone.images.length}');
     final model = ZoneModel(
       id: zone.id,
       venueId: zone.venueId,
       name: zone.name,
       type: zone.type,
+      images: zone.images,
     );
     await _firestore
         .collection('zones')

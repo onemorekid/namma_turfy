@@ -1,4 +1,5 @@
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 /// Cross-platform image upload service using firebase_storage + image_picker.
@@ -15,15 +16,23 @@ class StorageService {
 
   /// Upload a single [XFile] to [storagePath] and return the download URL.
   static Future<String> uploadImage(XFile file, String storagePath) async {
-    final bytes = await file.readAsBytes();
-    final ext = file.name.split('.').last.toLowerCase();
-    final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
-    final ref = _storage.ref().child(storagePath);
-    final snapshot = await ref.putData(
-      bytes,
-      SettableMetadata(contentType: contentType),
-    );
-    return await snapshot.ref.getDownloadURL();
+    try {
+      debugPrint('[StorageService] Uploading image to $storagePath...');
+      final bytes = await file.readAsBytes();
+      final ext = file.name.split('.').last.toLowerCase();
+      final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
+      final ref = _storage.ref().child(storagePath);
+      final snapshot = await ref.putData(
+        bytes,
+        SettableMetadata(contentType: contentType),
+      );
+      final url = await snapshot.ref.getDownloadURL();
+      debugPrint('[StorageService] Upload successful. URL: $url');
+      return url;
+    } catch (e) {
+      debugPrint('[StorageService] Upload FAILED for $storagePath: $e');
+      rethrow;
+    }
   }
 
   /// Upload multiple images for a venue. Returns new download URLs.
