@@ -47,7 +47,12 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
     final orderId = widget.orderId;
     final signature = widget.signature;
 
+    debugPrint(
+      '[Callback] Handling callback: paymentId=$paymentId, orderId=$orderId',
+    );
+
     if (paymentId == null || orderId == null || signature == null) {
+      debugPrint('[Callback] Error: missing params from Razorpay redirect');
       setState(() {
         _failed = true;
         _status = 'Payment response missing. Please contact support.';
@@ -58,12 +63,14 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
     // Retrieve booking metadata stored in sessionStorage before the redirect.
     Map<String, dynamic>? meta;
     try {
+      debugPrint('[Callback] Retrieving stored meta for order $orderId');
       meta = RazorpayServiceImpl.getStoredBookingData(orderId);
-    } catch (_) {
-      // Stub on non-web — should never reach here in production.
+    } catch (e) {
+      debugPrint('[Callback] getStoredBookingData failed: $e');
     }
 
     if (meta == null) {
+      debugPrint('[Callback] Error: no meta found in sessionStorage');
       setState(() {
         _failed = true;
         _status =
@@ -73,6 +80,7 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
     }
 
     try {
+      debugPrint('[Callback] Calling verifyAndBook');
       final result = await FirebaseFunctions.instance
           .httpsCallable('verifyAndBook')
           .call({
@@ -86,12 +94,13 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
             if (meta['couponCode'] != null) 'couponCode': meta['couponCode'],
           });
 
-      final bookingId =
-          (Map<String, dynamic>.from(result.data as Map))['bookingId']
-              as String;
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final bookingId = data['bookingId'] as String;
+      debugPrint('[Callback] verifyAndBook success: bookingId=$bookingId');
 
       if (mounted) context.go('/receipt/$bookingId');
     } catch (e) {
+      debugPrint('[Callback] verifyAndBook failed: $e');
       final msg = e is FirebaseFunctionsException
           ? e.message ?? e.toString()
           : e.toString();

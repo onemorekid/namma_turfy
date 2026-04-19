@@ -218,15 +218,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     String orderId,
     String signature,
   ) async {
+    debugPrint(
+      '[Checkout] _onPaymentSuccess: paymentId=$paymentId, orderId=$orderId',
+    );
     final user = ref.read(currentUserProvider);
-    if (user == null || _pendingOrderId == null) return;
+    final actualOrderId = (orderId.isNotEmpty) ? orderId : _pendingOrderId;
+
+    if (user == null) {
+      debugPrint('[Checkout] Error: user is null in _onPaymentSuccess');
+      return;
+    }
+    if (actualOrderId == null) {
+      debugPrint('[Checkout] Error: orderId is null in _onPaymentSuccess');
+      _showError('Critical error: Payment successful but order ID missing.');
+      return;
+    }
+
     setState(() => _isProcessing = true);
 
     try {
+      debugPrint('[Checkout] Calling verifyAndBook for order $actualOrderId');
       final result = await FirebaseFunctions.instance
           .httpsCallable('verifyAndBook')
           .call({
-            'razorpayOrderId': _pendingOrderId,
+            'razorpayOrderId': actualOrderId,
             'razorpayPaymentId': paymentId,
             'razorpaySignature': signature,
             'playerId': user.id,
@@ -236,13 +251,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             if (_appliedCouponCode != null) 'couponCode': _appliedCouponCode,
           });
 
-      final bookingId =
-          (Map<String, dynamic>.from(result.data as Map))['bookingId']
-              as String;
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final bookingId = data['bookingId'] as String;
+      debugPrint('[Checkout] verifyAndBook success: bookingId=$bookingId');
 
       if (!mounted) return;
       context.go('/receipt/$bookingId');
     } catch (e) {
+      debugPrint('[Checkout] verifyAndBook failed: $e');
       if (!mounted) return;
       setState(() => _isProcessing = false);
       String msg =
@@ -255,6 +271,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   void _onPaymentError(int? code, String? message) {
+    debugPrint('[Checkout] _onPaymentError: code=$code, message=$message');
     if (!mounted) return;
     setState(() {
       _isProcessing = false;

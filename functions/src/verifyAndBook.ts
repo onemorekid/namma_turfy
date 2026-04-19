@@ -58,9 +58,12 @@ export const verifyAndBook = functions.onCall(
       throw new functions.HttpsError("permission-denied", "playerId mismatch");
     }
 
+    console.log(`[verifyAndBook] Started for player ${playerId}, order ${razorpayOrderId}, payment ${razorpayPaymentId}`);
+
     // ── 1. Verify HMAC signature ──────────────────────────────────────────
     const keySecret = process.env.RAZORPAY_KEY_SECRET;
     if (!keySecret) {
+      console.error("[verifyAndBook] RAZORPAY_KEY_SECRET missing");
       throw new functions.HttpsError(
         "failed-precondition",
         "Payment gateway is not configured"
@@ -73,6 +76,7 @@ export const verifyAndBook = functions.onCall(
       .digest("hex");
 
     if (expectedSignature !== razorpaySignature) {
+      console.error(`[verifyAndBook] Signature mismatch. Expected ${expectedSignature.substring(0, 8)}..., got ${razorpaySignature.substring(0, 8)}...`);
       throw new functions.HttpsError(
         "unauthenticated",
         "Payment signature verification failed"

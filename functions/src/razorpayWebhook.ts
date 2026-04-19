@@ -230,12 +230,15 @@ export const razorpayWebhook = functionsV2.onRequest(
             tx.update(ref, { status: "booked", lockedBy: null, holdExpiry: null });
           }
 
+          const venueData = venueSnap.data();
           const bookingData: Record<string, unknown> = {
             id: bookingRef.id,
             playerId,
             venueId,
             zoneId,
             slotIds,
+            venueName: venueData?.name ?? null,
+            venueLocation: venueData?.location ?? null,
             date: txSlotDocs[0].data()!.startTime,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             totalPrice: subtotal,
