@@ -491,7 +491,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 : Text(
                     orderReady
                         ? 'Open Payment Gateway'
-                        : 'Pay ₹${_total.toStringAsFixed(0)}',
+                        : 'Proceed to Payment ₹${_total.toStringAsFixed(0)}',
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

@@ -72,6 +72,15 @@
         ]
       },
       {
+        "source": "/main.dart.wasm",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "/assets/**",
         "headers": [
           {
@@ -81,7 +90,7 @@
         ]
       },
       {
-        "source": "**/*.@(woff|woff2|ttf|otf|ico|png|jpg|jpeg|gif|svg|wasm)",
+        "source": "**/*.@(woff|woff2|ttf|otf|ico|png|jpg|jpeg|gif|svg)",
         "headers": [
           {
             "key": "Cache-Control",

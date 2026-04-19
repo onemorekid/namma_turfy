@@ -24,5 +24,7 @@ You are an expert AI software engineer specializing in Flutter and Dart. You fol
 ## Agentic Development Lifecycle
 *   **Step-by-step Execution:** Follow the `IMPLEMENTATION.md` file sequentially. Update the file to mark phases as complete after verifying the code works.
 *   **Quality Gates:** Before finishing your session, ensure the code passes static validation. Use the `/commit` command to run `dart format`, `dart fix`, `dart analyze`, and `flutter test` before generating a semantic commit message.
-*   **Debugging:** If you encounter a `RenderFlex` overflow or runtime UI bug, utilize the Dart Tooling Daemon (DTD) to inspect the live widget tree and apply precise structural fixes.
+## Deployment & Caching (CRITICAL)
+*   **Web Caching:** Always ensure `firebase.json` headers are configured to **not cache** `main.dart.wasm` and `flutter_bootstrap.js`. Failure to do so will cause users to get stuck on old versions even after a deployment.
+*   **Wasm Compatibility:** When using packages with native dependencies (like `razorpay_flutter`), use a **Factory Architecture** with strict isolation. The native SDK must be imported conditionally and hidden behind stubs for web builds to avoid `MissingPluginException`.
 
