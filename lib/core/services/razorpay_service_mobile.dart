@@ -8,12 +8,16 @@ import 'razorpay_service_mobile_stub.dart'
 
 /// Android / iOS implementation — delegates to the razorpay_flutter plugin.
 class RazorpayServiceImpl implements RazorpayService {
-  late final dynamic _razorpay;
+  dynamic _razorpay;
 
   RazorpayServiceImpl() {
     if (!kIsWeb) {
-      // ignore: undefined_class
-      _razorpay = Razorpay();
+      try {
+        // ignore: undefined_class
+        _razorpay = Razorpay();
+      } catch (e) {
+        debugPrint('[RazorpayMobile] Failed to init: $e');
+      }
     }
   }
 
@@ -26,7 +30,7 @@ class RazorpayServiceImpl implements RazorpayService {
     required OnPaymentError onError,
     required OnExternalWallet onExternalWallet,
   }) {
-    if (kIsWeb) return;
+    if (kIsWeb || _razorpay == null) return;
 
     // ignore: undefined_identifier
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (dynamic r) {
@@ -44,15 +48,18 @@ class RazorpayServiceImpl implements RazorpayService {
 
   @override
   void open(Map<String, dynamic> options) {
-    if (!kIsWeb) {
+    if (!kIsWeb && _razorpay != null) {
       _razorpay.open(options);
     }
   }
 
   @override
   void clear() {
-    if (!kIsWeb) {
+    if (!kIsWeb && _razorpay != null) {
       _razorpay.clear();
+    }
+  }
+
     }
   }
 
