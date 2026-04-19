@@ -1,9 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in_web/web_only.dart'
-    if (dart.library.io) 'package:namma_turfy/core/stubs/google_sign_in_web_stub.dart'
-    as web;
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -43,12 +39,6 @@ class LoginScreen extends ConsumerWidget {
               const SizedBox(height: 64),
               if (authState.isLoading)
                 const CircularProgressIndicator(color: Color(0xFF35CA67))
-              else if (kIsWeb)
-                // Official Google-rendered button for Web (fixes FedCM/CORS warnings)
-                SizedBox(
-                  height: 50,
-                  child: web.renderButton(),
-                )
               else
                 SizedBox(
                   width: double.infinity,
@@ -60,8 +50,7 @@ class LoginScreen extends ConsumerWidget {
                     icon: Image.network(
                       'https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Logo.png',
                       height: 24,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.login),
+                      errorBuilder: (_, __, ___) => const Icon(Icons.login),
                     ),
                     label: const Text(
                       'Continue with Google',
@@ -74,7 +63,7 @@ class LoginScreen extends ConsumerWidget {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       side: BorderSide(color: Colors.grey[300]!),
-                      elevation: 0,
+                      elevation: 1,
                     ),
                   ),
                 ),

@@ -25,6 +25,15 @@ class AuthRepositoryImpl implements AuthRepository {
 
   AuthRepositoryImpl() {
     _firebaseAuth.authStateChanges().listen(_onAuthStateChanged);
+    if (kIsWeb) {
+      // Process any pending redirect sign-in (e.g. mobile web returning from
+      // Google OAuth redirect). authStateChanges() fires automatically once
+      // processed, so we only need to catch errors here.
+      _firebaseAuth.getRedirectResult().catchError((e) {
+        debugPrint('[AuthRepository] getRedirectResult error: $e');
+        return UserCredential; // satisfy Future<UserCredential> type
+      } as UserCredential Function(Object));
+    }
   }
 
   void _onAuthStateChanged(User? firebaseUser) {
@@ -76,33 +85,47 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> signInWithGoogle() async {
     try {
-      GoogleSignInAccount? googleUser;
       if (kIsWeb) {
-        // Attempt silent sign-in first as recommended for web.
-        debugPrint('[AuthRepository] Attempting silent sign-in for web...');
-        googleUser = await _googleSignIn.signInSilently();
+        // Use Firebase Auth directly on web — avoids dependency on
+        // google_sign_in_web and works on both desktop and mobile browsers.
+        final provider = GoogleAuthProvider()
+          ..addScope('email')
+          ..addScope('profile');
+
+        try {
+          // Desktop web: signInWithPopup opens a Google popup.
+          debugPrint('[AuthRepository] Web: signInWithPopup...');
+          await _firebaseAuth.signInWithPopup(provider);
+          debugPrint('[AuthRepository] signInWithPopup success');
+        } on FirebaseAuthException catch (e) {
+          // Mobile web: browsers block popups triggered by async code.
+          // Fall back to redirect — user leaves app and returns after auth.
+          if (e.code == 'popup-blocked' ||
+              e.code == 'popup-closed-by-user' ||
+              e.code == 'cancelled-popup-request') {
+            debugPrint('[AuthRepository] Popup blocked, falling back to redirect...');
+            await _firebaseAuth.signInWithRedirect(provider);
+            // App will restart; getRedirectResult() in constructor handles it.
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        // Native Android / iOS: use Google Sign In SDK.
+        debugPrint('[AuthRepository] Native: GoogleSignIn.signIn()...');
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          debugPrint('[AuthRepository] Sign-in cancelled by user');
+          return;
+        }
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          idToken: googleAuth.idToken,
+          accessToken: googleAuth.accessToken,
+        );
+        await _firebaseAuth.signInWithCredential(credential);
+        debugPrint('[AuthRepository] Native signInWithCredential success');
       }
-
-      if (googleUser == null) {
-        debugPrint('[AuthRepository] Prompting user for sign-in...');
-        googleUser = await _googleSignIn.signIn();
-      }
-
-      if (googleUser == null) {
-        debugPrint('[AuthRepository] Sign-in cancelled by user');
-        return;
-      }
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      debugPrint('[AuthRepository] Fetched googleAuth tokens');
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-        accessToken: googleAuth.accessToken,
-      );
-      await _firebaseAuth.signInWithCredential(credential);
-      debugPrint('[AuthRepository] Firebase signInWithCredential success');
     } catch (e) {
       debugPrint('[AuthRepository] signInWithGoogle failed: $e');
       rethrow;
