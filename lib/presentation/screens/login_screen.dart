@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_sign_in_web/google_sign_in_web.dart'
+import 'package:google_sign_in_web/web_only.dart'
     if (dart.library.io) 'package:namma_turfy/core/stubs/google_sign_in_web_stub.dart'
     as web;
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
