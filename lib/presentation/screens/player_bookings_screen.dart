@@ -56,8 +56,19 @@ class _BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isConfirmed = booking.status == BookingStatus.confirmed;
-    final statusColor = isConfirmed ? const Color(0xFF35CA67) : Colors.orange;
+    final String status = booking.displayStatus;
+    Color statusColor;
+    if (status == 'Upcoming') {
+      statusColor = const Color(0xFF1E88E5);
+    } else if (status == 'Completed') {
+      statusColor = Colors.grey;
+    } else if (status == 'Ongoing') {
+      statusColor = const Color(0xFF35CA67);
+    } else if (status == 'Cancelled') {
+      statusColor = Colors.red;
+    } else {
+      statusColor = Colors.orange;
+    }
     final shortId = booking.id.length > 6
         ? booking.id.substring(booking.id.length - 6)
         : booking.id;
@@ -97,7 +108,7 @@ class _BookingCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      booking.status.name.toUpperCase(),
+                      status.toUpperCase(),
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 11,

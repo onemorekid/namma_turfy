@@ -95,7 +95,7 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
       final bookingId = data['bookingId'] as String;
       debugPrint('[Callback] verifyAndBook success: bookingId=$bookingId');
 
-      if (mounted) context.go('/receipt/$bookingId');
+      if (mounted) context.go('/my-bookings');
     } catch (e) {
       debugPrint('[Callback] verifyAndBook failed: $e');
       final msg = e is FirebaseFunctionsException

@@ -271,7 +271,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       debugPrint('[Checkout] verifyAndBook success: bookingId=$bookingId');
 
       if (!mounted) return;
-      context.go('/receipt/$bookingId');
+      context.go('/my-bookings');
     } catch (e) {
       debugPrint('[Checkout] verifyAndBook failed: $e');
       if (!mounted) return;

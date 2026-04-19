@@ -69,4 +69,14 @@ class Booking {
 
   // Convenience: actual amount charged to player
   double get amountCharged => discountedPrice ?? totalPrice;
+
+  String get displayStatus {
+    if (status == BookingStatus.cancelled) return 'Cancelled';
+    if (status == BookingStatus.pending) return 'Pending';
+
+    final now = DateTime.now();
+    if (now.isBefore(startTime)) return 'Upcoming';
+    if (now.isAfter(endTime)) return 'Completed';
+    return 'Ongoing';
+  }
 }

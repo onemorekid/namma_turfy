@@ -12,7 +12,7 @@ class RazorpayServiceMobile implements RazorpayService {
   RazorpayServiceMobile() {
     if (!kIsWeb) {
       try {
-        // ignore: undefined_class
+        // ignore: undefined_class, undefined_method, undefined_identifier
         _razorpay = Razorpay();
       } catch (e) {
         debugPrint('[RazorpayMobile] Failed to initialize native SDK: $e');

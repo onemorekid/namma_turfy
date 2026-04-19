@@ -36,7 +36,9 @@ class ReceiptScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Booking Confirmed!',
+                    booking.displayStatus == 'Upcoming'
+                        ? 'Booking Confirmed!'
+                        : 'Booking ${booking.displayStatus}!',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
