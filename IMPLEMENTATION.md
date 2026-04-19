@@ -67,7 +67,17 @@ This document serves as the implementation roadmap for "Namma Turfy", a sports g
 
 ---
 
-## Agent Verification Protocol
+---
+
+## Phase 6: Post-Deployment & Stability
+**Goal:** Resolve production issues and maintain architecture.
+
+*   [x] **Step 6.1: Real-Time Booking Data Enrichment**
+    *   Enhanced booking data to include `startTime`, `endTime`, `playerName`, `playerPhone`, `zoneName`, and `sportType` in both Firestore and UI.
+*   [x] **Step 6.2: Wasm-Safe Razorpay Integration**
+    *   **Architecture:** Implemented a platform-neutral factory to isolate the native Razorpay SDK. This prevents `MissingPluginException` during Wasm runtime.
+*   [x] **Step 6.3: Production Cache Management**
+    *   **Fix:** Updated `firebase.json` to disable caching for `main.dart.wasm` and `flutter_bootstrap.js`. This ensures users always receive the latest app logic immediately after deployment.
 After completing each phase, the agent MUST:
 1. Run `flutter test` to ensure Red-Green-Refactor TDD loops are satisfied.
 2. Execute `dart format .` and `dart fix --apply`.
