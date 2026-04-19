@@ -69,15 +69,8 @@ class AppDrawer extends ConsumerWidget {
                 context.push('/my-bookings');
               },
             ),
-          if (user?.activeRole == UserRole.player)
-            ListTile(
-              leading: const Icon(Icons.sports),
-              title: const Text('Events'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/events');
-              },
-            ),
+          // Events disabled — coming soon
+
           if (user != null && user.roles.length > 1) ...[
             const Divider(),
             const Padding(

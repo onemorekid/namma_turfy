@@ -277,6 +277,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         })
         .catchError((e) {
           debugPrint('[CheckoutScreen] Failed to log payment failure: $e');
+          return e; // satisfy Future<DocumentReference> return type
         });
   }
 
@@ -292,9 +293,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final commission = double.parse(
-      (_total * widget.venue.commissionRate / 100).toStringAsFixed(2),
-    );
     final orderReady = _pendingOptions != null;
 
     return Scaffold(
@@ -417,27 +415,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
             // ── Platform fee disclosure ───────────────────────────────────
             const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[200]!),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Platform fee (${widget.venue.commissionRate}%)',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  Text(
-                    '₹${commission.toStringAsFixed(0)}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
+            // Platform fee row hidden — commission collection disabled
+
             const SizedBox(height: 32),
           ],
         ),
