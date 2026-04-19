@@ -438,7 +438,8 @@ class _SlotGrid extends ConsumerWidget {
           itemBuilder: (context, index) {
             final slot = slots[index];
             final isSelected = selectedSlots.any((s) => s.id == slot.id);
-            final isAvailable = slot.status == SlotStatus.available;
+            final isPast = slot.startTime.isBefore(DateTime.now());
+            final isAvailable = slot.status == SlotStatus.available && !isPast;
 
             return GestureDetector(
               onTap: isAvailable

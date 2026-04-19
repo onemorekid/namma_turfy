@@ -25,6 +25,7 @@ class BookingRepositoryImpl implements BookingRepository {
         // Read all in one batch first (required before writes in transaction)
         final docs = await Future.wait(refs.map((r) => tx.get(r)));
 
+        final now = DateTime.now();
         for (final doc in docs) {
           if (!doc.exists) {
             debugPrint('[lockSlots] Slot ${doc.id} not found');
@@ -35,6 +36,17 @@ class BookingRepositoryImpl implements BookingRepository {
           if (status != 'available') {
             debugPrint('[lockSlots] Slot ${doc.id} is $status, not available');
             throw Exception('Slot ${doc.id} is no longer available');
+          }
+
+          final startTimeRaw = data['startTime'];
+          if (startTimeRaw != null) {
+            final startTime = startTimeRaw is Timestamp
+                ? startTimeRaw.toDate()
+                : DateTime.parse(startTimeRaw as String);
+            if (startTime.isBefore(now)) {
+              debugPrint('[lockSlots] Slot ${doc.id} is in the past');
+              throw Exception('Slot ${doc.id} has already passed');
+            }
           }
         }
 

@@ -535,13 +535,29 @@ class _ZoneItem extends ConsumerWidget {
                   onPressed: () {
                     final selectedDate = ref.read(ownerSelectedDateProvider);
                     final now = DateTime.now();
-                    final startTime = DateTime(
+
+                    // 1. Calculate the start time for the new slot
+                    DateTime startTime = DateTime(
                       selectedDate.year,
                       selectedDate.month,
                       selectedDate.day,
                       now.hour,
                       now.minute,
                     );
+
+                    // 2. Prevent past slots
+                    if (startTime.isBefore(now)) {
+                      // If it's today, default to the next clean hour or just 'now'
+                      // but if it's already in the past, show an error.
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Cannot add slots in the past.'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
                     final newSlot = Slot(
                       id: 'slot_${zone.id}_${startTime.millisecondsSinceEpoch}',
                       zoneId: zone.id,
@@ -692,9 +708,11 @@ class _ZoneItem extends ConsumerWidget {
     WidgetRef ref,
     String zoneId,
   ) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final initialDate = ref.read(ownerSelectedDateProvider);
-    DateTime startDate = initialDate;
-    DateTime endDate = initialDate;
+    DateTime startDate = initialDate.isBefore(today) ? today : initialDate;
+    DateTime endDate = startDate;
     TimeOfDay startTime = const TimeOfDay(hour: 6, minute: 0);
     TimeOfDay endTime = const TimeOfDay(hour: 22, minute: 0);
     final priceController = TextEditingController(text: '500');
@@ -793,6 +811,7 @@ class _ZoneItem extends ConsumerWidget {
                           int.tryParse(durationController.text) ?? 60;
                       final price =
                           double.tryParse(priceController.text) ?? 500.0;
+                      final now = DateTime.now();
 
                       for (
                         int i = 0;
@@ -818,21 +837,33 @@ class _ZoneItem extends ConsumerWidget {
                           final slotEnd = current.add(
                             Duration(minutes: duration),
                           );
-                          slots.add(
-                            Slot(
-                              id: 'slot_${zoneId}_${current.millisecondsSinceEpoch}',
-                              zoneId: zoneId,
-                              startTime: current,
-                              endTime: slotEnd,
-                              price: price,
-                              status: SlotStatus.available,
-                            ),
-                          );
+
+                          // Only add if start time is in the future
+                          if (current.isAfter(now)) {
+                            slots.add(
+                              Slot(
+                                id: 'slot_${zoneId}_${current.millisecondsSinceEpoch}',
+                                zoneId: zoneId,
+                                startTime: current,
+                                endTime: slotEnd,
+                                price: price,
+                                status: SlotStatus.available,
+                              ),
+                            );
+                          }
                           current = slotEnd;
                         }
                       }
 
                       if (slots.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'No future slots were generated. Check your time range.',
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
                         Navigator.pop(context);
                         return;
                       }
