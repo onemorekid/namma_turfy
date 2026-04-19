@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-// Only imported on web — safe because this screen is only reachable on web.
-// ignore: uri_does_not_exist
-import 'package:namma_turfy/core/services/razorpay_service_web.dart'
-    if (dart.library.io) 'package:namma_turfy/core/services/razorpay_service_mobile_stub.dart';
+import 'package:namma_turfy/core/services/razorpay_service_impl.dart';
 
 /// Handles the Razorpay redirect callback on mobile web.
 ///

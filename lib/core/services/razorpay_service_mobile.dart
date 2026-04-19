@@ -1,22 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'razorpay_service.dart';
 
-// We must NOT import razorpay_flutter on web, even conditionally in some cases,
-// because dart2wasm may still try to compile it.
+// Import stub for web, and native only for IO.
 import 'razorpay_service_mobile_stub.dart'
     if (dart.library.io) 'package:razorpay_flutter/razorpay_flutter.dart';
 
 /// Android / iOS implementation — delegates to the razorpay_flutter plugin.
-class RazorpayServiceImpl implements RazorpayService {
+class RazorpayServiceMobile implements RazorpayService {
   dynamic _razorpay;
 
-  RazorpayServiceImpl() {
+  RazorpayServiceMobile() {
     if (!kIsWeb) {
       try {
         // ignore: undefined_class
         _razorpay = Razorpay();
       } catch (e) {
-        debugPrint('[RazorpayMobile] Failed to init: $e');
+        debugPrint('[RazorpayMobile] Failed to initialize native SDK: $e');
       }
     }
   }
@@ -32,18 +31,22 @@ class RazorpayServiceImpl implements RazorpayService {
   }) {
     if (kIsWeb || _razorpay == null) return;
 
-    // ignore: undefined_identifier
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (dynamic r) {
-      onSuccess(r.paymentId ?? '', r.orderId ?? '', r.signature ?? '');
-    });
-    // ignore: undefined_identifier
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (dynamic r) {
-      onError(r.code, r.message);
-    });
-    // ignore: undefined_identifier
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (dynamic r) {
-      onExternalWallet(r.walletName);
-    });
+    try {
+      // ignore: undefined_identifier
+      _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, (dynamic r) {
+        onSuccess(r.paymentId ?? '', r.orderId ?? '', r.signature ?? '');
+      });
+      // ignore: undefined_identifier
+      _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (dynamic r) {
+        onError(r.code, r.message);
+      });
+      // ignore: undefined_identifier
+      _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (dynamic r) {
+        onExternalWallet(r.walletName);
+      });
+    } catch (e) {
+      debugPrint('[RazorpayMobile] Error setting up listeners: $e');
+    }
   }
 
   @override
@@ -60,9 +63,6 @@ class RazorpayServiceImpl implements RazorpayService {
     }
   }
 
-    }
-  }
-
-  /// Stub for the static method needed by PaymentCallbackScreen
+  /// Stub for mobile
   static Map<String, dynamic>? getStoredBookingData(String orderId) => null;
 }

@@ -20,7 +20,7 @@ external JSBoolean _isMobileBrowserJS();
 
 /// Flutter Web implementation — delegates to the Razorpay JS SDK
 /// via the JS bridge function defined in web/index.html.
-class RazorpayServiceImpl implements RazorpayService {
+class RazorpayServiceWeb implements RazorpayService {
   OnPaymentSuccess? _onSuccess;
   OnPaymentError? _onError;
   OnExternalWallet? _onExternalWallet;
@@ -29,8 +29,6 @@ class RazorpayServiceImpl implements RazorpayService {
   static bool get _isMobile =>
       _isMobileBrowserJS().toDart || web.window.innerWidth <= 768;
 
-  /// On mobile web we use redirect flow — Flutter needs to show a dedicated
-  /// "Open Payment" button that is a direct user gesture.
   @override
   bool get requiresUserGesture => true;
 
@@ -48,7 +46,6 @@ class RazorpayServiceImpl implements RazorpayService {
   @override
   void open(Map<String, dynamic> options) {
     // Extract and strip booking metadata injected by CheckoutScreen.
-    // These are NOT passed to Razorpay but are stored for the redirect callback.
     final meta = options['_bookingMeta'] as Map<String, dynamic>?;
     final cleanOptions = Map<String, dynamic>.from(options)
       ..remove('_bookingMeta');
