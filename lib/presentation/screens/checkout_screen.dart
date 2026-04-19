@@ -145,6 +145,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     try {
+      debugPrint('[Checkout] Calling createOrder Cloud Function...');
       final result = await FirebaseFunctions.instance
           .httpsCallable('createOrder')
           .call({
@@ -156,6 +157,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
       final data = Map<String, dynamic>.from(result.data as Map);
       _pendingOrderId = data['orderId'] as String;
+      debugPrint('[Checkout] createOrder success: $_pendingOrderId');
 
       // Parse amount safely — mobile web returns doubles (e.g. 50000.0),
       // desktop web may return int or fixnum.Int64. Cast via num to handle all.
@@ -185,6 +187,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       };
 
       if (kIsWeb) {
+        debugPrint('[Checkout] Web detected, setting _pendingOptions and updating UI');
         // Web (Desktop & Mobile): store options and show "Open Payment" button.
         // Browsers block the Razorpay modal/redirect if it's not triggered
         // by a direct user gesture (tap).
@@ -193,11 +196,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           _isProcessing = false;
         });
       } else {
+        debugPrint('[Checkout] Native detected, opening Razorpay immediately');
         // Native Mobile: open the SDK immediately.
         setState(() => _isProcessing = false);
         _razorpay.open(options);
       }
     } catch (e) {
+      debugPrint('[Checkout] Error in _startPayment: $e');
       if (!mounted) return;
       setState(() => _isProcessing = false);
       String msg = 'Could not create payment order. Please try again.';
@@ -208,8 +213,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   /// Step 1b — web only: open the Razorpay modal from a direct user tap.
   void _openWebPayment() {
-    if (_pendingOptions == null) return;
-    _razorpay.open(_pendingOptions!);
+    debugPrint('[Checkout] _openWebPayment called, orderReady=${_pendingOptions != null}');
+    if (_pendingOptions == null) {
+      debugPrint('[Checkout] Error: _pendingOptions is null in _openWebPayment');
+      return;
+    }
+    try {
+      debugPrint('[Checkout] Invoking _razorpay.open with order ${_pendingOptions?['order_id']}');
+      _razorpay.open(_pendingOptions!);
+    } catch (e) {
+      debugPrint('[Checkout] Exception in _razorpay.open: $e');
+      _showError('Failed to open payment gateway: $e');
+    }
   }
 
   /// Step 2 — payment succeeded → call verifyAndBook.
