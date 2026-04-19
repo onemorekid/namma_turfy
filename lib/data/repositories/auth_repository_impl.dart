@@ -29,10 +29,13 @@ class AuthRepositoryImpl implements AuthRepository {
       // Process any pending redirect sign-in (e.g. mobile web returning from
       // Google OAuth redirect). authStateChanges() fires automatically once
       // processed, so we only need to catch errors here.
-      _firebaseAuth.getRedirectResult().catchError((e) {
-        debugPrint('[AuthRepository] getRedirectResult error: $e');
-        return UserCredential; // satisfy Future<UserCredential> type
-      } as UserCredential Function(Object));
+      () async {
+        try {
+          await _firebaseAuth.getRedirectResult();
+        } catch (e) {
+          debugPrint('[AuthRepository] getRedirectResult error: $e');
+        }
+      }();
     }
   }
 
