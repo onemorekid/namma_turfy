@@ -1,4 +1,5 @@
 // Conditional export: the compiler picks the right file per platform.
-// dart.library.js_interop is defined on Flutter Web (both JS and Wasm).
-export 'razorpay_service_mobile.dart'
-    if (dart.library.js_interop) 'razorpay_service_web.dart';
+// For Wasm compatibility, we default to the web implementation
+// and only export the mobile implementation when dart.library.io is available.
+export 'razorpay_service_web.dart'
+    if (dart.library.io) 'razorpay_service_mobile.dart';
