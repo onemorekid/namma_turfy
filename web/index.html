@@ -20,6 +20,11 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
+  <!-- Force fresh page fetch -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -57,7 +62,10 @@
     // Desktop: opens modal (requires direct user-gesture tap).
     // Mobile:  uses redirect flow (modal unreliable on mobile browsers).
     window.openRazorpay = function(options, onSuccess, onError) {
+      console.log('[rzp_bridge] Opening Razorpay with options:', options);
+      
       if (typeof Razorpay === 'undefined') {
+        console.error('[rzp_bridge] Razorpay SDK not loaded');
         onError(0, 'Razorpay SDK not loaded');
         return;
       }
@@ -73,14 +81,17 @@
         theme: { color: '#35CA67' },
       };
 
-      if (_isMobileBrowser()) {
-        // Redirect flow: Razorpay redirects back to /payment-callback with
-        // payment params in the URL. Booking metadata is stored in sessionStorage
-        // so the callback screen can call verifyAndBook after the redirect.
+      // Force redirect flow on mobile devices or small screens.
+      var useRedirect = _isMobileBrowser() || window.innerWidth <= 768;
+      console.log('[rzp_bridge] useRedirect:', useRedirect);
+
+      if (useRedirect) {
         rzpOptions.redirect = true;
         rzpOptions.callback_url = window.location.origin + '/payment-callback';
+        console.log('[rzp_bridge] Initializing redirect flow to:', rzpOptions.callback_url);
       } else {
         rzpOptions.handler = function(response) {
+          console.log('[rzp_bridge] Payment success:', response);
           onSuccess(
             response.razorpay_payment_id,
             response.razorpay_order_id,
@@ -88,12 +99,20 @@
           );
         };
         rzpOptions.modal = {
-          ondismiss: function() { onError(0, 'Payment cancelled'); }
+          ondismiss: function() { 
+            console.log('[rzp_bridge] Payment modal dismissed');
+            onError(0, 'Payment cancelled'); 
+          }
         };
       }
 
-      var rzp = new Razorpay(rzpOptions);
-      rzp.open();
+      try {
+        var rzp = new Razorpay(rzpOptions);
+        rzp.open();
+      } catch (e) {
+        console.error('[rzp_bridge] Exception during rzp.open():', e);
+        onError(0, 'Internal SDK error');
+      }
     };
   </script>
 </head>

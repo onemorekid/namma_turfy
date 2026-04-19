@@ -13,7 +13,7 @@ class ZoneModel extends Zone {
 
   factory ZoneModel.fromJson(Map<String, dynamic> json) {
     final List<String> images = [];
-    
+
     // Check various common field names for images
     final imageFields = ['images', 'imageUrls', 'image_urls'];
     for (final field in imageFields) {
@@ -38,7 +38,6 @@ class ZoneModel extends Zone {
       images: images,
     );
   }
-
 
   factory ZoneModel.fromSnapshot(DocumentSnapshot snap) {
     final data = snap.data() as Map<String, dynamic>? ?? {};

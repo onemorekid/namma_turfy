@@ -21,8 +21,10 @@ class StorageService {
       final bytes = await file.readAsBytes();
       final ext = file.name.split('.').last.toLowerCase();
       final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
-      debugPrint('[StorageService] Size: ${bytes.length} bytes, Type: $contentType');
-      
+      debugPrint(
+        '[StorageService] Size: ${bytes.length} bytes, Type: $contentType',
+      );
+
       final ref = _storage.ref().child(storagePath);
       final snapshot = await ref.putData(
         bytes,
@@ -42,7 +44,9 @@ class StorageService {
     String venueId,
     List<XFile> images,
   ) async {
-    debugPrint('[StorageService] uploadVenueImages for $venueId, count: ${images.length}');
+    debugPrint(
+      '[StorageService] uploadVenueImages for $venueId, count: ${images.length}',
+    );
     final urls = <String>[];
     for (final img in images) {
       final ts = DateTime.now().microsecondsSinceEpoch;
@@ -57,7 +61,9 @@ class StorageService {
     String zoneId,
     List<XFile> images,
   ) async {
-    debugPrint('[StorageService] uploadZoneImages for $zoneId, count: ${images.length}');
+    debugPrint(
+      '[StorageService] uploadZoneImages for $zoneId, count: ${images.length}',
+    );
     final urls = <String>[];
     for (final img in images) {
       final ts = DateTime.now().microsecondsSinceEpoch;

@@ -157,8 +157,10 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                           return AppNetworkImage(
                             imageUrl: allImages[index],
                             fit: BoxFit.cover,
-                            errorWidget:
-                                const Icon(Icons.broken_image, size: 60),
+                            errorWidget: const Icon(
+                              Icons.broken_image,
+                              size: 60,
+                            ),
                           );
                         },
                       ),
@@ -179,9 +181,7 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Colors.white.withAlpha(
-                                    _currentImageIndex == entry.key
-                                        ? 230
-                                        : 100,
+                                    _currentImageIndex == entry.key ? 230 : 100,
                                   ),
                                 ),
                               );

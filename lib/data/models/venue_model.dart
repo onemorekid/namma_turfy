@@ -33,7 +33,7 @@ class VenueModel extends Venue {
 
   factory VenueModel.fromJson(Map<String, dynamic> json) {
     final List<String> images = [];
-    
+
     // Check various common field names for images
     final imageFields = ['images', 'imageUrls', 'image_urls'];
     for (final field in imageFields) {
@@ -47,7 +47,9 @@ class VenueModel extends Venue {
     }
 
     if (images.isEmpty) {
-      debugPrint('[VenueModel] WARNING: No images found for venue ${json['id']}');
+      debugPrint(
+        '[VenueModel] WARNING: No images found for venue ${json['id']}',
+      );
     }
 
     return VenueModel(
@@ -78,7 +80,6 @@ class VenueModel extends Venue {
       razorpayFundAccountId: json['razorpayFundAccountId'] as String?,
     );
   }
-
 
   factory VenueModel.fromSnapshot(DocumentSnapshot snap) {
     final data = snap.data() as Map<String, dynamic>? ?? {};

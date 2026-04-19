@@ -3,5 +3,4 @@
 // renderButton() behind `if (kIsWeb)`, so this stub is never actually invoked.
 import 'package:flutter/widgets.dart';
 
-Widget renderButton({Object? configuration}) =>
-    const SizedBox.shrink();
+Widget renderButton({Object? configuration}) => const SizedBox.shrink();

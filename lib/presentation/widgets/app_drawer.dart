@@ -69,8 +69,8 @@ class AppDrawer extends ConsumerWidget {
                 context.push('/my-bookings');
               },
             ),
-          // Events disabled — coming soon
 
+          // Events disabled — coming soon
           if (user != null && user.roles.length > 1) ...[
             const Divider(),
             const Padding(

@@ -1,4 +1,5 @@
 import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 import 'razorpay_service.dart';
 
 @JS('openRazorpay')
@@ -24,7 +25,9 @@ class RazorpayServiceImpl implements RazorpayService {
   OnPaymentError? _onError;
   OnExternalWallet? _onExternalWallet;
 
-  static bool get _isMobile => _isMobileBrowserJS().toDart;
+  // Match the logic in web/index.html for redirect flow.
+  static bool get _isMobile =>
+      _isMobileBrowserJS().toDart || web.window.innerWidth <= 768;
 
   /// On mobile web we use redirect flow — Flutter needs to show a dedicated
   /// "Open Payment" button that is a direct user gesture.

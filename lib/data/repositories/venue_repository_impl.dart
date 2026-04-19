@@ -76,7 +76,9 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveVenue(Venue venue) async {
-    debugPrint('[VenueRepositoryImpl] saveVenue: ${venue.id}, images: ${venue.images.length}');
+    debugPrint(
+      '[VenueRepositoryImpl] saveVenue: ${venue.id}, images: ${venue.images.length}',
+    );
     final model = VenueModel(
       id: venue.id,
       ownerId: venue.ownerId,
@@ -124,7 +126,9 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveZone(Zone zone) async {
-    debugPrint('[VenueRepositoryImpl] saveZone: ${zone.id}, images: ${zone.images.length}');
+    debugPrint(
+      '[VenueRepositoryImpl] saveZone: ${zone.id}, images: ${zone.images.length}',
+    );
     final model = ZoneModel(
       id: zone.id,
       venueId: zone.venueId,

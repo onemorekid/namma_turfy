@@ -31,6 +31,7 @@ dependencies:
   razorpay_flutter: ^1.4.3
   riverpod_annotation: ^4.0.2
   url_launcher: ^6.3.2
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

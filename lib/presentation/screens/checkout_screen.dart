@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -183,15 +184,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         },
       };
 
-      if (_razorpay.requiresUserGesture) {
-        // Web: store options and show "Open Payment" button — the modal must
-        // be triggered by a direct tap to satisfy browser security requirements.
+      if (kIsWeb) {
+        // Web (Desktop & Mobile): store options and show "Open Payment" button.
+        // Browsers block the Razorpay modal/redirect if it's not triggered
+        // by a direct user gesture (tap).
         setState(() {
           _pendingOptions = options;
           _isProcessing = false;
         });
       } else {
-        // Mobile: open immediately.
+        // Native Mobile: open the SDK immediately.
         setState(() => _isProcessing = false);
         _razorpay.open(options);
       }
@@ -208,7 +210,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void _openWebPayment() {
     if (_pendingOptions == null) return;
     _razorpay.open(_pendingOptions!);
-    setState(() => _pendingOptions = null);
   }
 
   /// Step 2 — payment succeeded → call verifyAndBook.
@@ -275,10 +276,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           'source': 'client_sdk',
           'createdAt': FieldValue.serverTimestamp(),
         })
-        .catchError((e) {
-          debugPrint('[CheckoutScreen] Failed to log payment failure: $e');
-          return e; // satisfy Future<DocumentReference> return type
-        });
+        .catchError((e) => e); // satisfy Future<DocumentReference> return type
   }
 
   void _onExternalWallet(String? walletName) {
@@ -415,8 +413,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
             // ── Platform fee disclosure ───────────────────────────────────
             const SizedBox(height: 24),
-            // Platform fee row hidden — commission collection disabled
 
+            // Platform fee row hidden — commission collection disabled
             const SizedBox(height: 32),
           ],
         ),
