@@ -113,8 +113,23 @@ class ReceiptScreen extends ConsumerWidget {
                             label: 'Date',
                             value: DateFormat(
                               'EEE, MMM dd, yyyy',
-                            ).format(booking.date),
+                            ).format(booking.startTime),
                           ),
+                          _ReceiptRow(
+                            label: 'Time',
+                            value:
+                                '${DateFormat('hh:mm a').format(booking.startTime)} - ${DateFormat('hh:mm a').format(booking.endTime)}',
+                          ),
+                          if (booking.sportType != null)
+                            _ReceiptRow(
+                              label: 'Sport',
+                              value: booking.sportType!,
+                            ),
+                          if (booking.zoneName != null)
+                            _ReceiptRow(
+                              label: 'Zone',
+                              value: booking.zoneName!,
+                            ),
                           _ReceiptRow(
                             label: 'Slots Booked',
                             value: '${booking.slotIds.length}',

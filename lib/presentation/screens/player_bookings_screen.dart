@@ -133,7 +133,7 @@ class _BookingCard extends StatelessWidget {
               const Divider(height: 1),
               const SizedBox(height: 10),
 
-              // ── Date + slots + amount ────────────────────────────────
+              // ── Date + Time + slots ────────────────────────────────
               Row(
                 children: [
                   const Icon(
@@ -143,7 +143,7 @@ class _BookingCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Text(
-                    DateFormat('EEE, MMM dd, yyyy').format(booking.date),
+                    DateFormat('EEE, MMM dd, yyyy').format(booking.startTime),
                     style: const TextStyle(fontSize: 13),
                   ),
                   const Spacer(),
@@ -156,15 +156,45 @@ class _BookingCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   const Icon(Icons.access_time, size: 14, color: Colors.grey),
                   const SizedBox(width: 6),
                   Text(
-                    '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}  •  '
+                    '${DateFormat('hh:mm a').format(booking.startTime)} - '
+                    '${DateFormat('hh:mm a').format(booking.endTime)}  •  '
+                    '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+              if (booking.zoneName != null || booking.sportType != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.sports_soccer,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${booking.sportType ?? ""}  •  ${booking.zoneName ?? ""}',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 10),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+
+              Row(
+                children: [
+                  Text(
                     'Booking #$shortId',
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const Spacer(),
                   Text(

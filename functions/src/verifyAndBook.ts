@@ -99,10 +99,12 @@ export const verifyAndBook = functions.onCall(
       return { bookingId: existingBookings.docs[0].id };
     }
 
-    // ── 3. Fetch slot docs + venue ─────────────────────────────────────────
+    // ── 3. Fetch slot docs + venue + zone + player info ──────────────────
     const slotRefs = slotIds.map((id) => db.collection("slots").doc(id));
-    const [venueSnap, ...slotDocs] = await Promise.all([
+    const [venueSnap, zoneSnap, playerAuth, ...slotDocs] = await Promise.all([
       db.collection("venues").doc(venueId).get(),
+      db.collection("zones").doc(zoneId).get(),
+      admin.auth().getUser(playerId),
       ...slotRefs.map((r) => r.get()),
     ]);
 
@@ -110,6 +112,23 @@ export const verifyAndBook = functions.onCall(
       (sum, doc) => sum + ((doc.data()?.price as number) ?? 0),
       0
     );
+
+    // Calculate start and end times for the entire booking
+    const slotStartTimes = slotDocs.map((d) => {
+      const st = d.data()?.startTime;
+      return st instanceof admin.firestore.Timestamp
+        ? st.toMillis()
+        : new Date(st).getTime();
+    });
+    const slotEndTimes = slotDocs.map((d) => {
+      const et = d.data()?.endTime;
+      return et instanceof admin.firestore.Timestamp
+        ? et.toMillis()
+        : new Date(et).getTime();
+    });
+
+    const minStart = Math.min(...slotStartTimes);
+    const maxEnd = Math.max(...slotEndTimes);
 
     const rawRate = venueSnap.data()?.commissionRate;
     const commissionRate =
@@ -238,6 +257,7 @@ export const verifyAndBook = functions.onCall(
 
         // 5d. Create booking (razorpaySignature stored for cryptographic audit)
         const venueData = venueSnap.data();
+        const zoneData = zoneSnap.data();
         const bookingData: Record<string, unknown> = {
           id: bookingRef.id,
           playerId,
@@ -246,7 +266,16 @@ export const verifyAndBook = functions.onCall(
           slotIds,
           venueName: venueData?.name ?? null,
           venueLocation: venueData?.location ?? null,
-          date: txSlotDocs[0].data()!.startTime,
+          zoneName: zoneData?.name ?? null,
+          sportType: zoneData?.type ?? null,
+          playerName:
+            playerAuth.displayName ??
+            playerAuth.email?.split("@")[0] ??
+            "Player",
+          playerPhone: playerAuth.phoneNumber ?? null,
+          date: admin.firestore.Timestamp.fromMillis(minStart),
+          startTime: admin.firestore.Timestamp.fromMillis(minStart),
+          endTime: admin.firestore.Timestamp.fromMillis(maxEnd),
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           totalPrice: subtotal,
           platformCommission,

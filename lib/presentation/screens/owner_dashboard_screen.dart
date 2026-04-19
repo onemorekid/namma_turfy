@@ -899,10 +899,24 @@ class _BookingsList extends ConsumerWidget {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                title: Text('Booking #$shortId'),
-                subtitle: Text(
-                  'Date: ${DateFormat('MMM dd, hh:mm a').format(booking.date)}\n'
-                  'Player: ${booking.playerId.substring(0, booking.playerId.length.clamp(0, 8))}...',
+                isThreeLine: true,
+                title: Text(
+                  '${booking.playerName ?? "Player"} • Booking #$shortId',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${DateFormat('EEE, MMM dd').format(booking.startTime)} • '
+                      '${DateFormat('hh:mm a').format(booking.startTime)} - ${DateFormat('hh:mm a').format(booking.endTime)}',
+                    ),
+                    Text(
+                      '${booking.sportType ?? ""} • ${booking.zoneName ?? "Zone"} • ${booking.slotIds.length} slot(s)',
+                    ),
+                    if (booking.playerPhone != null)
+                      Text('Contact: ${booking.playerPhone}'),
+                  ],
                 ),
                 trailing: Text(
                   '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',

@@ -11,7 +11,9 @@ class Booking {
   final String venueId;
   final String zoneId;
   final List<String> slotIds;
-  final DateTime date;
+  final DateTime date; // legacy field — prefer startTime
+  final DateTime startTime;
+  final DateTime endTime;
   final DateTime createdAt;
 
   // Pricing
@@ -20,9 +22,13 @@ class Booking {
   final double platformCommission; // 5% of discountedPrice
   final double ownerPayout; // discountedPrice - platformCommission
 
-  // Denormalized venue info (set at booking time for fast list rendering)
+  // Denormalized venue/player info (set at booking time for fast list rendering)
   final String? venueName;
   final String? venueLocation;
+  final String? zoneName;
+  final String? sportType;
+  final String? playerName;
+  final String? playerPhone;
 
   // Razorpay audit trail
   final String? razorpayOrderId;
@@ -40,6 +46,8 @@ class Booking {
     required this.zoneId,
     required this.slotIds,
     required this.date,
+    required this.startTime,
+    required this.endTime,
     required this.createdAt,
     required this.totalPrice,
     this.discountedPrice,
@@ -47,6 +55,10 @@ class Booking {
     required this.ownerPayout,
     this.venueName,
     this.venueLocation,
+    this.zoneName,
+    this.sportType,
+    this.playerName,
+    this.playerPhone,
     this.razorpayOrderId,
     this.razorpayPaymentId,
     this.razorpaySignature,

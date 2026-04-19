@@ -106,7 +106,9 @@ class AuthRepositoryImpl implements AuthRepository {
           if (e.code == 'popup-blocked' ||
               e.code == 'popup-closed-by-user' ||
               e.code == 'cancelled-popup-request') {
-            debugPrint('[AuthRepository] Popup blocked, falling back to redirect...');
+            debugPrint(
+              '[AuthRepository] Popup blocked, falling back to redirect...',
+            );
             await _firebaseAuth.signInWithRedirect(provider);
             // App will restart; getRedirectResult() in constructor handles it.
           } else {
