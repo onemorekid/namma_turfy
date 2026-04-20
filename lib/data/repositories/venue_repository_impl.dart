@@ -244,20 +244,25 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> saveCoupon(Coupon coupon) async {
-    final model = CouponModel(
-      id: coupon.id,
-      ownerId: coupon.ownerId,
-      code: coupon.code,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-      validTo: coupon.validTo,
-      usageLimit: coupon.usageLimit,
-      restrictedEmails: coupon.restrictedEmails,
-    );
+    // Never write usageCount from the client — it is owned exclusively by
+    // Cloud Functions (FieldValue.increment). Writing it here would reset the
+    // counter on every owner edit.
+    final data = <String, dynamic>{
+      'id': coupon.id,
+      'ownerId': coupon.ownerId,
+      'code': coupon.code,
+      'discountType':
+          coupon.discountType == DiscountType.flat ? 'flat' : 'percentage',
+      'discountValue': coupon.discountValue,
+      'validTo': coupon.validTo.toIso8601String(),
+      'usageLimit': coupon.usageLimit,
+      if (coupon.restrictedEmails != null)
+        'restrictedEmails': coupon.restrictedEmails,
+    };
     await _firestore
         .collection('coupons')
         .doc(coupon.id)
-        .set(model.toJson(), SetOptions(merge: true));
+        .set(data, SetOptions(merge: true));
   }
 
   @override
@@ -266,9 +271,10 @@ class VenueRepositoryImpl implements VenueRepository {
   }
 
   @override
-  Stream<List<CouponUsage>> watchCouponUsages(String couponId) {
+  Stream<List<CouponUsage>> watchCouponUsages(String couponId, String ownerId) {
     return _firestore
         .collection('coupon_usages')
+        .where('ownerId', isEqualTo: ownerId)
         .where('couponId', isEqualTo: couponId)
         .orderBy('createdAt', descending: true)
         .snapshots()

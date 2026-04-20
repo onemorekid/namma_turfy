@@ -1395,7 +1395,10 @@ class _CouponCardState extends ConsumerState<_CouponCard> {
                   ),
                   const SizedBox(height: 12),
                   // Analytics Panel
-                  _CouponAnalyticsPanel(coupon: coupon),
+                  _CouponAnalyticsPanel(
+                    couponId: coupon.id,
+                    ownerId: coupon.ownerId,
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -1434,12 +1437,18 @@ class _CouponCardState extends ConsumerState<_CouponCard> {
 }
 
 class _CouponAnalyticsPanel extends ConsumerWidget {
-  final Coupon coupon;
-  const _CouponAnalyticsPanel({required this.coupon});
+  final String couponId;
+  final String ownerId;
+  const _CouponAnalyticsPanel({
+    required this.couponId,
+    required this.ownerId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final usagesAsync = ref.watch(couponUsagesProvider(coupon.id));
+    final usagesAsync = ref.watch(
+      couponUsagesProvider((couponId: couponId, ownerId: ownerId)),
+    );
 
     return usagesAsync.when(
       data: (usages) {

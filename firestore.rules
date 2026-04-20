@@ -109,9 +109,13 @@ service cloud.firestore {
     }
 
     // Coupon usages — audit trail for coupon redemptions.
-    // Players can read their own usage history; admin reads all.
+    // Players can read their own usage history; venue owners can list/read
+    // usages for their own coupons (query must filter by ownerId == request.auth.uid);
+    // admin reads all.
     match /coupon_usages/{usageId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.playerId == request.auth.uid);
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.playerId == request.auth.uid)
+        || (isSignedIn() && hasRole('owner') && resource.data.ownerId == request.auth.uid);
       allow write: if isAdmin();
     }
   }

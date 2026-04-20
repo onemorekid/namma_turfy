@@ -160,6 +160,7 @@ export const razorpayWebhook = functionsV2.onRequest(
       //     double-counting. The coupon_usages doc is also skipped here.)
       let discount = 0;
       let couponRefForTx: admin.firestore.DocumentReference | null = null;
+      let couponOwnerId = "";
       if (couponCode && couponDocId) {
         const couponSnap = await db.collection("coupons").doc(couponDocId).get();
         if (couponSnap.exists) {
@@ -171,6 +172,7 @@ export const razorpayWebhook = functionsV2.onRequest(
               ? subtotal * (discountValue / 100)
               : discountValue;
           couponRefForTx = couponSnap.ref;
+          couponOwnerId = cd.ownerId ?? "";
         }
       }
 
@@ -218,6 +220,7 @@ export const razorpayWebhook = functionsV2.onRequest(
               tx.set(usageLogRef, {
                 couponId: couponDocId,
                 couponCode: couponCode.toUpperCase(),
+                ownerId: couponOwnerId,
                 playerId,
                 bookingId: bookingRef.id,
                 discountApplied: discount,
