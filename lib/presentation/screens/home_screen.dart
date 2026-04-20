@@ -522,47 +522,239 @@ class _ProfileTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentUserProvider);
+    final hasMultipleRoles = (user?.roles.length ?? 0) > 1;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
-      body: Padding(
+      body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: AppSpacing.lg),
-            Center(
-              child: CircleAvatar(
-                radius: 40,
-                backgroundColor: AppColors.primaryLight,
-                child: Text(
-                  (user != null && user.name.isNotEmpty)
-                      ? user.name[0].toUpperCase()
-                      : '?',
-                  style: AppTextStyles.displayLarge
-                      .copyWith(color: AppColors.primary),
-                ),
-              ),
+        children: [
+          const SizedBox(height: AppSpacing.lg),
+
+          // ── Avatar + name ──────────────────────────────────────────────────
+          Center(
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: AppColors.primaryLight,
+              backgroundImage: user?.photoUrl != null
+                  ? NetworkImage(user!.photoUrl!)
+                  : null,
+              child: user?.photoUrl == null
+                  ? Text(
+                      (user != null && user.name.isNotEmpty)
+                          ? user.name[0].toUpperCase()
+                          : '?',
+                      style: AppTextStyles.displayLarge
+                          .copyWith(color: AppColors.primary),
+                    )
+                  : null,
             ),
-            const SizedBox(height: AppSpacing.md),
-            Center(
-              child: Text(user?.name ?? 'User',
-                  style: AppTextStyles.titleLarge),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: Text(user?.name ?? 'User', style: AppTextStyles.titleLarge),
+          ),
+          Center(
+            child: Text(
+              user?.email ?? '',
+              style: AppTextStyles.bodyMedium
+                  .copyWith(color: AppColors.onSurfaceVar),
             ),
-            Center(
-              child: Text(user?.email ?? '',
-                  style: AppTextStyles.bodyMedium
+          ),
+          // Active role badge
+          if (user != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Center(child: _RoleBadge(role: user.activeRole)),
+          ],
+
+          // ── Mode switcher (only for multi-role accounts) ──────────────────
+          if (hasMultipleRoles) ...[
+            const SizedBox(height: AppSpacing.xl),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: Text('Switch Mode',
+                  style: AppTextStyles.labelMedium
                       .copyWith(color: AppColors.onSurfaceVar)),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            ListTile(
-              leading: const Icon(Icons.logout, color: AppColors.error),
-              title: Text('Sign Out',
-                  style: AppTextStyles.bodyLarge
-                      .copyWith(color: AppColors.error)),
-              onTap: () => ref
-                  .read(authControllerProvider.notifier)
-                  .signOut(),
+            const SizedBox(height: AppSpacing.sm),
+            _ModeCard(
+              icon: Icons.sports_soccer,
+              label: 'Player Mode',
+              subtitle: 'Browse and book venues',
+              role: UserRole.player,
+              isActive: user?.activeRole == UserRole.player,
+              onTap: () {
+                ref.read(authRepositoryProvider).switchRole(UserRole.player);
+                ref.read(_navIndexProvider.notifier).set(0);
+                context.go('/');
+              },
             ),
+            if (user?.roles.contains(UserRole.owner) == true)
+              _ModeCard(
+                icon: Icons.store_outlined,
+                label: 'Owner Mode',
+                subtitle: 'Manage your venues',
+                role: UserRole.owner,
+                isActive: user?.activeRole == UserRole.owner,
+                onTap: () {
+                  ref.read(authRepositoryProvider).switchRole(UserRole.owner);
+                  context.go('/owner');
+                },
+              ),
+            if (user?.roles.contains(UserRole.admin) == true)
+              _ModeCard(
+                icon: Icons.admin_panel_settings_outlined,
+                label: 'Admin Mode',
+                subtitle: 'Platform administration',
+                role: UserRole.admin,
+                isActive: user?.activeRole == UserRole.admin,
+                onTap: () {
+                  ref.read(authRepositoryProvider).switchRole(UserRole.admin);
+                  context.go('/admin');
+                },
+              ),
+          ],
+
+          // ── Actions ────────────────────────────────────────────────────────
+          const SizedBox(height: AppSpacing.xl),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.history_outlined,
+                color: AppColors.onSurfaceVar),
+            title: Text('My Bookings', style: AppTextStyles.bodyLarge),
+            trailing: const Icon(Icons.chevron_right,
+                color: AppColors.outlineVariant),
+            onTap: () => context.push('/my-bookings'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.headset_mic_outlined,
+                color: AppColors.onSurfaceVar),
+            title: Text('Contact Us', style: AppTextStyles.bodyLarge),
+            trailing: const Icon(Icons.chevron_right,
+                color: AppColors.outlineVariant),
+            onTap: () => context.push('/contact'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: AppColors.error),
+            title: Text('Sign Out',
+                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.error)),
+            onTap: () =>
+                ref.read(authControllerProvider.notifier).signOut(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Role badge ─────────────────────────────────────────────────────────────────
+
+class _RoleBadge extends StatelessWidget {
+  final UserRole role;
+  const _RoleBadge({required this.role});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, bg) = switch (role) {
+      UserRole.admin => ('Admin', Icons.admin_panel_settings, AppColors.error),
+      UserRole.owner => ('Owner', Icons.store, AppColors.peakTime),
+      UserRole.player => ('Player', Icons.sports_soccer, AppColors.primary),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: bg.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: bg.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: bg),
+          const SizedBox(width: 4),
+          Text(label,
+              style: AppTextStyles.labelSmall.copyWith(
+                  color: bg, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Mode switch card ───────────────────────────────────────────────────────────
+
+class _ModeCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final UserRole role;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _ModeCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.role,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: isActive ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primaryLight : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isActive ? AppColors.primary : AppColors.outline,
+            width: isActive ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? AppColors.primary
+                    : AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon,
+                  size: 20,
+                  color: isActive ? Colors.white : AppColors.onSurfaceVar),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label,
+                      style: AppTextStyles.titleMedium.copyWith(
+                          color: isActive
+                              ? AppColors.primary
+                              : AppColors.onSurface)),
+                  Text(subtitle,
+                      style: AppTextStyles.bodySmall),
+                ],
+              ),
+            ),
+            if (isActive)
+              const Icon(Icons.check_circle,
+                  color: AppColors.primary, size: 20)
+            else
+              const Icon(Icons.chevron_right,
+                  color: AppColors.outlineVariant, size: 20),
           ],
         ),
       ),
