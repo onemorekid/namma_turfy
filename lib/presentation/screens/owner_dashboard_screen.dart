@@ -2,12 +2,14 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:namma_turfy/core/services/storage_service.dart';
 import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
+import 'package:namma_turfy/domain/entities/user.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
@@ -37,6 +39,18 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       appBar: AppBar(
         title: const Text('Owner Dashboard'),
         actions: [
+          // Switch to player mode — only shown if user also has the player role
+          if (user?.roles.contains(UserRole.player) == true)
+            IconButton(
+              icon: const Icon(Icons.sports_soccer_outlined),
+              tooltip: 'Switch to Player Mode',
+              onPressed: () async {
+                await ref
+                    .read(authRepositoryProvider)
+                    .switchRole(UserRole.player);
+                if (context.mounted) context.go('/');
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () =>

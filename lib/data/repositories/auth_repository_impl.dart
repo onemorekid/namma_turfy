@@ -140,7 +140,12 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> switchRole(UserRole role) async {
     if (_currentUser != null) {
-      await updateUser(_currentUser!.copyWith(activeRole: role));
+      // Optimistically update _currentUser in memory so the router redirect
+      // sees the new role immediately — before the Firestore snapshot returns.
+      final updated = _currentUser!.copyWith(activeRole: role);
+      _currentUser = updated;
+      _userController.add(updated);
+      await updateUser(updated); // persist to Firestore
     }
   }
 

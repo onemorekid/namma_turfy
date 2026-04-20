@@ -67,6 +67,19 @@ class _RouterNotifier extends ChangeNotifier {
       if (user.activeRole == UserRole.admin) return '/admin';
     }
 
+    // If on the owner dashboard but the active role is no longer owner/admin,
+    // redirect to home (e.g. after switching to player mode).
+    if (loc == '/owner' &&
+        user.activeRole != UserRole.owner &&
+        user.activeRole != UserRole.admin) {
+      return '/';
+    }
+
+    // If on the admin dashboard but no longer an admin, redirect to home.
+    if (loc == '/admin' && user.activeRole != UserRole.admin) {
+      return '/';
+    }
+
     // Logged-in user trying to access auth-only screens → send home.
     if (loc == '/login' ||
         loc == '/splash' ||
