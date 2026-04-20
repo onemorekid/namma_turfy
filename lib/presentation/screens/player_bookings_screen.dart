@@ -207,6 +207,27 @@ class _BookingCard extends StatelessWidget {
                     'Booking #$shortId',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
+                  if (booking.couponCode != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        booking.couponCode!,
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   Text(
                     'View receipt',

@@ -52,7 +52,7 @@ export const razorpayWebhook = functionsV2.onRequest(
       .digest("hex");
 
     if (expectedSig !== signature) {
-      console.warn("[webhook] Invalid webhook signature");
+      console.warn(`[webhook] Invalid webhook signature. Expected ${expectedSig.substring(0, 8)}..., got ${signature.substring(0, 8)}...`);
       res.status(400).send("Invalid signature");
       return;
     }

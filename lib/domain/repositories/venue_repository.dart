@@ -2,6 +2,7 @@ import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
+import 'package:namma_turfy/domain/entities/coupon_usage.dart';
 
 abstract class VenueRepository {
   // Venues
@@ -27,4 +28,5 @@ abstract class VenueRepository {
   Future<Coupon?> getCouponByCode(String code);
   Future<void> saveCoupon(Coupon coupon);
   Future<void> deleteCoupon(String couponId);
+  Stream<List<CouponUsage>> watchCouponUsages(String couponId);
 }

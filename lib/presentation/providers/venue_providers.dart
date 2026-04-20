@@ -5,6 +5,7 @@ import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
+import 'package:namma_turfy/domain/entities/coupon_usage.dart';
 import 'package:namma_turfy/domain/repositories/venue_repository.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 
@@ -74,6 +75,11 @@ final ownerCouponsProvider = StreamProvider<List<Coupon>>((ref) {
   if (user == null) return Stream.value([]);
   return ref.watch(venueRepositoryProvider).watchCoupons(user.id);
 });
+
+final couponUsagesProvider =
+    StreamProvider.family<List<CouponUsage>, String>((ref, couponId) {
+      return ref.watch(venueRepositoryProvider).watchCouponUsages(couponId);
+    });
 
 final venueSearchControllerProvider =
     AsyncNotifierProvider<VenueSearchController, List<Venue>>(

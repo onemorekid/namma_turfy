@@ -22,6 +22,7 @@ class BookingModel extends Booking {
     super.sportType,
     super.playerName,
     super.playerPhone,
+    super.couponCode,
     super.razorpayOrderId,
     super.razorpayPaymentId,
     super.razorpaySignature,
@@ -61,6 +62,7 @@ class BookingModel extends Booking {
       sportType: json['sportType'] as String?,
       playerName: json['playerName'] as String?,
       playerPhone: json['playerPhone'] as String?,
+      couponCode: json['couponCode'] as String?,
       razorpayOrderId: json['razorpayOrderId'] as String?,
       razorpayPaymentId: json['razorpayPaymentId'] as String?,
       razorpaySignature: json['razorpaySignature'] as String?,
@@ -73,7 +75,7 @@ class BookingModel extends Booking {
   }
 
   factory BookingModel.fromSnapshot(DocumentSnapshot snap) {
-    final data = snap.data() as Map<String, dynamic>? ?? {};
+    final data = Map<String, dynamic>.from(snap.data() as Map<String, dynamic>? ?? {});
     data['id'] = snap.id;
     if (data['date'] is Timestamp) {
       data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();
@@ -116,6 +118,7 @@ class BookingModel extends Booking {
     if (sportType != null) 'sportType': sportType,
     if (playerName != null) 'playerName': playerName,
     if (playerPhone != null) 'playerPhone': playerPhone,
+    if (couponCode != null) 'couponCode': couponCode,
     if (razorpayOrderId != null) 'razorpayOrderId': razorpayOrderId,
     if (razorpayPaymentId != null) 'razorpayPaymentId': razorpayPaymentId,
     if (razorpaySignature != null) 'razorpaySignature': razorpaySignature,

@@ -47,6 +47,14 @@
         { "fieldPath": "sportsTypes", "arrayConfig": "CONTAINS" },
         { "fieldPath": "location", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "coupon_usages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "couponId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

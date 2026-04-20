@@ -945,8 +945,36 @@ class _BookingsList extends ConsumerWidget {
                     Text(
                       '${booking.sportType ?? ""} • ${booking.zoneName ?? "Zone"} • ${booking.slotIds.length} slot(s)',
                     ),
+                    if (booking.couponCode != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'COUPON: ${booking.couponCode} (₹${(booking.totalPrice - (booking.discountedPrice ?? booking.totalPrice)).toStringAsFixed(0)} off)',
+                            style: const TextStyle(
+                              color: Colors.orange,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                     if (booking.playerPhone != null)
-                      Text('Contact: ${booking.playerPhone}'),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('Contact: ${booking.playerPhone}'),
+                      ),
                   ],
                 ),
                 trailing: Text(
@@ -1005,33 +1033,7 @@ class _CouponsManager extends ConsumerWidget {
                 return ListView.builder(
                   itemCount: coupons.length,
                   itemBuilder: (context, index) {
-                    final coupon = coupons[index];
-                    return Card(
-                      child: ListTile(
-                        title: Text(
-                          coupon.code,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${coupon.discountType == DiscountType.percentage ? '${coupon.discountValue.toStringAsFixed(0)}% Off' : '₹${coupon.discountValue.toStringAsFixed(0)} Flat'} '
-                          '• Valid till ${DateFormat('dd MMM').format(coupon.validTo)}'
-                          '${coupon.restrictedEmails != null && coupon.restrictedEmails!.isNotEmpty ? ' • ${coupon.restrictedEmails!.length} users' : ''}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.delete,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          onPressed: () => ref
-                              .read(venueRepositoryProvider)
-                              .deleteCoupon(coupon.id),
-                        ),
-                      ),
-                    );
+                    return _CouponCard(coupon: coupons[index]);
                   },
                 );
               },
@@ -1040,6 +1042,133 @@ class _CouponsManager extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  static void _confirmDeleteCoupon(
+    BuildContext context,
+    WidgetRef ref,
+    Coupon coupon,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Coupon?'),
+        content: Text('Are you sure you want to delete ${coupon.code}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(venueRepositoryProvider).deleteCoupon(coupon.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showEditCouponDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Coupon coupon,
+  ) {
+    final limitController = TextEditingController(
+      text: coupon.usageLimit.toString(),
+    );
+    final emailsController = TextEditingController(
+      text: coupon.restrictedEmails?.join(', ') ?? '',
+    );
+    DateTime selectedDate = coupon.validTo;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Edit Coupon ${coupon.code}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Code, type, and value cannot be changed once created.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: limitController,
+                  decoration: const InputDecoration(labelText: 'Usage Limit'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Valid Until'),
+                  subtitle: Text(DateFormat('yyyy-MM-dd').format(selectedDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now().isBefore(coupon.validTo)
+                          ? DateTime.now()
+                          : coupon.validTo,
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                TextField(
+                  controller: emailsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Restrict to Emails (Optional)',
+                    hintText: 'user1@email.com, user2@email.com',
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final emails = emailsController.text
+                    .split(',')
+                    .map((e) => e.trim())
+                    .where((e) => e.isNotEmpty)
+                    .toList();
+
+                final updated = Coupon(
+                  id: coupon.id,
+                  ownerId: coupon.ownerId,
+                  code: coupon.code,
+                  discountType: coupon.discountType,
+                  discountValue: coupon.discountValue,
+                  validTo: selectedDate,
+                  usageLimit:
+                      int.tryParse(limitController.text) ?? coupon.usageLimit,
+                  usageCount: coupon.usageCount,
+                  restrictedEmails: emails.isEmpty ? null : emails,
+                );
+
+                ref.read(venueRepositoryProvider).saveCoupon(updated);
+                Navigator.pop(context);
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1166,6 +1295,214 @@ class _CouponsManager extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CouponCard extends ConsumerStatefulWidget {
+  final Coupon coupon;
+  const _CouponCard({required this.coupon});
+
+  @override
+  ConsumerState<_CouponCard> createState() => _CouponCardState();
+}
+
+class _CouponCardState extends ConsumerState<_CouponCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final coupon = widget.coupon;
+    final now = DateTime.now();
+    final isExpired = coupon.validTo.isBefore(now);
+    final isExhausted = coupon.usageCount >= coupon.usageLimit;
+
+    String statusLabel = 'Active';
+    Color statusColor = Colors.green;
+
+    if (isExpired) {
+      statusLabel = 'Expired';
+      statusColor = Colors.grey;
+    } else if (isExhausted) {
+      statusLabel = 'Exhausted';
+      statusColor = Colors.orange;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          ListTile(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            title: Row(
+              children: [
+                Text(
+                  coupon.code,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Text(
+              '${coupon.discountType == DiscountType.percentage ? '${coupon.discountValue.toStringAsFixed(0)}% Off' : '₹${coupon.discountValue.toStringAsFixed(0)} Flat'} '
+              '• Valid till ${DateFormat('dd MMM yyyy').format(coupon.validTo)}',
+            ),
+            trailing: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
+          ),
+          if (_isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Usage Status',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${coupon.usageCount} / ${coupon.usageLimit} redemptions',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Analytics Panel
+                  _CouponAnalyticsPanel(coupon: coupon),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _CouponsManager._showEditCouponDialog(
+                          context,
+                          ref,
+                          coupon,
+                        ),
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () => _CouponsManager._confirmDeleteCoupon(
+                          context,
+                          ref,
+                          coupon,
+                        ),
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text('Delete'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CouponAnalyticsPanel extends ConsumerWidget {
+  final Coupon coupon;
+  const _CouponAnalyticsPanel({required this.coupon});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usagesAsync = ref.watch(couponUsagesProvider(coupon.id));
+
+    return usagesAsync.when(
+      data: (usages) {
+        if (usages.isEmpty) {
+          return const Text(
+            'No redemptions yet.',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          );
+        }
+
+        final totalDiscount = usages.fold(
+          0.0,
+          (sum, u) => sum + u.discountApplied,
+        );
+        final lastUsed = usages.first.createdAt;
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Column(
+            children: [
+              _AnalyticsRow(
+                label: 'Total Discount Given',
+                value: '₹${totalDiscount.toStringAsFixed(0)}',
+              ),
+              const SizedBox(height: 4),
+              _AnalyticsRow(
+                label: 'Last Redeemed',
+                value: DateFormat('dd MMM, hh:mm a').format(lastUsed),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const LinearProgressIndicator(),
+      error: (e, st) => Text(
+        'Analytics error: $e',
+        style: const TextStyle(fontSize: 12, color: Colors.red),
+      ),
+    );
+  }
+}
+
+class _AnalyticsRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _AnalyticsRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+      ],
     );
   }
 }

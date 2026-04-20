@@ -4,10 +4,12 @@ import 'package:namma_turfy/data/models/venue_model.dart';
 import 'package:namma_turfy/data/models/zone_model.dart';
 import 'package:namma_turfy/data/models/slot_model.dart';
 import 'package:namma_turfy/data/models/coupon_model.dart';
+import 'package:namma_turfy/data/models/coupon_usage_model.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
+import 'package:namma_turfy/domain/entities/coupon_usage.dart';
 import 'package:namma_turfy/domain/repositories/venue_repository.dart';
 
 class VenueRepositoryImpl implements VenueRepository {
@@ -261,6 +263,18 @@ class VenueRepositoryImpl implements VenueRepository {
   @override
   Future<void> deleteCoupon(String couponId) async {
     await _firestore.collection('coupons').doc(couponId).delete();
+  }
+
+  @override
+  Stream<List<CouponUsage>> watchCouponUsages(String couponId) {
+    return _firestore
+        .collection('coupon_usages')
+        .where('couponId', isEqualTo: couponId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (s) => s.docs.map((d) => CouponUsageModel.fromSnapshot(d)).toList(),
+        );
   }
 
   @override
