@@ -7,7 +7,10 @@ import 'package:namma_turfy/core/theme/app_spacing.dart';
 import 'package:namma_turfy/core/theme/app_text_styles.dart';
 import 'package:namma_turfy/core/utils/proximity_helper.dart';
 import 'package:namma_turfy/domain/entities/user.dart';
+import 'package:intl/intl.dart';
+import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
+import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/discovery_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
 import 'package:namma_turfy/presentation/widgets/offer_banner_widget.dart';
@@ -46,13 +49,7 @@ class HomeScreen extends ConsumerWidget {
       body: body,
       bottomNavigationBar: _AppBottomNav(
         currentIndex: navIndex,
-        onTap: (i) {
-          if (i == 1) {
-            context.push('/my-bookings');
-            return;
-          }
-          ref.read(_navIndexProvider.notifier).set(i);
-        },
+        onTap: (i) => ref.read(_navIndexProvider.notifier).set(i),
       ),
     );
   }
@@ -501,9 +498,201 @@ class _CategoryFilter extends ConsumerWidget {
 
 // ── Placeholder tabs (Tournaments, Profile) ────────────────────────────────────
 
-class _BookingsTab extends StatelessWidget {
+class _BookingsTab extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookingsAsync = ref.watch(playerBookingsProvider);
+
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          title: const Text('My Bookings'),
+          floating: true,
+          snap: true,
+          automaticallyImplyLeading: false,
+        ),
+        bookingsAsync.when(
+          data: (bookings) {
+            if (bookings.isEmpty) {
+              return SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.sports_soccer,
+                          size: 64, color: AppColors.outlineVariant),
+                      const SizedBox(height: 16),
+                      Text('No bookings yet',
+                          style: AppTextStyles.titleMedium
+                              .copyWith(color: AppColors.onSurfaceVar)),
+                      const SizedBox(height: 8),
+                      Text('Book a venue to get started!',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(color: AppColors.onSurfaceVar)),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return SliverPadding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              sliver: SliverList.separated(
+                itemCount: bookings.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (_, i) =>
+                    _BookingCard(booking: bookings[i]),
+              ),
+            );
+          },
+          loading: () => const SliverFillRemaining(
+            child: Center(
+                child: CircularProgressIndicator(color: AppColors.primary)),
+          ),
+          error: (e, _) => SliverFillRemaining(
+            child: Center(child: Text('Error: $e')),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BookingCard extends StatelessWidget {
+  final Booking booking;
+  const _BookingCard({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = booking.displayStatus;
+    final Color statusColor = switch (status) {
+      'Upcoming'  => const Color(0xFF1E88E5),
+      'Ongoing'   => AppColors.primary,
+      'Completed' => AppColors.outlineVariant,
+      'Cancelled' => AppColors.error,
+      _           => AppColors.peakTime,
+    };
+    final shortId = booking.id.length > 6
+        ? booking.id.substring(booking.id.length - 6)
+        : booking.id;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push('/receipt/${booking.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Venue name + status
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(booking.venueName ?? 'Venue',
+                        style: AppTextStyles.titleMedium),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status.toUpperCase(),
+                      style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              if (booking.venueLocation != null) ...[
+                const SizedBox(height: 4),
+                Row(children: [
+                  const Icon(Icons.location_on,
+                      size: 14, color: AppColors.onSurfaceVar),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(booking.venueLocation!,
+                        style: AppTextStyles.bodySmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+              ],
+              const SizedBox(height: AppSpacing.sm),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.sm),
+              // Date + price
+              Row(children: [
+                const Icon(Icons.calendar_today,
+                    size: 14, color: AppColors.onSurfaceVar),
+                const SizedBox(width: 6),
+                Text(DateFormat('EEE, MMM dd, yyyy').format(booking.startTime),
+                    style: AppTextStyles.bodySmall),
+                const Spacer(),
+                Text(
+                  '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary),
+                ),
+              ]),
+              const SizedBox(height: 4),
+              // Time + slots
+              Row(children: [
+                const Icon(Icons.access_time,
+                    size: 14, color: AppColors.onSurfaceVar),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '${DateFormat('hh:mm a').format(booking.startTime)} – '
+                    '${DateFormat('hh:mm a').format(booking.endTime)}  •  '
+                    '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}',
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.sm),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.sm),
+              Row(children: [
+                Text('Booking #$shortId',
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.onSurfaceVar)),
+                if (booking.couponCode != null) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.offerBg,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(booking.couponCode!,
+                        style: const TextStyle(
+                            color: AppColors.offer,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
+                const Spacer(),
+                Text('View receipt',
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: AppColors.primary)),
+              ]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TournamentsTab extends StatelessWidget {
