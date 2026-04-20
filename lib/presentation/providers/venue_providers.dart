@@ -5,6 +5,7 @@ import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
+import 'package:namma_turfy/domain/entities/coupon_usage.dart';
 import 'package:namma_turfy/domain/repositories/venue_repository.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 
@@ -73,6 +74,17 @@ final ownerCouponsProvider = StreamProvider<List<Coupon>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return Stream.value([]);
   return ref.watch(venueRepositoryProvider).watchCoupons(user.id);
+});
+
+/// Streams coupon usage records for a specific coupon owned by a given owner.
+/// Both couponId and ownerId are required for Firestore rule compliance.
+final couponUsagesProvider = StreamProvider.family<
+  List<CouponUsage>,
+  ({String couponId, String ownerId})
+>((ref, params) {
+  return ref
+      .watch(venueRepositoryProvider)
+      .watchCouponUsages(params.couponId, params.ownerId);
 });
 
 final venueSearchControllerProvider =

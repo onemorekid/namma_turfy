@@ -86,51 +86,57 @@ export const createOrder = functions.onCall(
         .limit(1)
         .get();
 
-      if (!couponSnap.empty) {
-        const couponDoc = couponSnap.docs[0];
-        const couponData = couponDoc.data();
+      if (couponSnap.empty) {
+        throw new functions.HttpsError("not-found", "Invalid coupon code");
+      }
 
-        const validTo: admin.firestore.Timestamp | string = couponData.validTo;
-        const validToMs =
-          validTo instanceof admin.firestore.Timestamp
-            ? validTo.toMillis()
-            : new Date(validTo as string).getTime();
+      const couponDoc = couponSnap.docs[0];
+      const couponData = couponDoc.data();
 
-        if (validToMs >= Date.now()) {
-          // Check usage limit (pre-check; atomic enforcement happens in verifyAndBook)
-          const usageCount: number = couponData.usageCount ?? 0;
-          const usageLimit: number = couponData.usageLimit ?? 100;
-          if (usageCount >= usageLimit) {
-            throw new functions.HttpsError(
-              "resource-exhausted",
-              "This coupon has reached its usage limit"
-            );
-          }
+      const validTo: admin.firestore.Timestamp | string = couponData.validTo;
+      const validToMs =
+        validTo instanceof admin.firestore.Timestamp
+          ? validTo.toMillis()
+          : new Date(validTo as string).getTime();
 
-          // Check restricted emails
-          const restrictedEmails: string[] | undefined = couponData.restrictedEmails;
-          let emailAllowed = true;
-          if (restrictedEmails && restrictedEmails.length > 0) {
-            const userRecord = await admin.auth().getUser(request.auth.uid);
-            emailAllowed = restrictedEmails.includes(userRecord.email ?? "");
-          }
+      if (validToMs < Date.now()) {
+        throw new functions.HttpsError("failed-precondition", "Coupon has expired");
+      }
 
-          if (emailAllowed) {
-            const discountType: string = couponData.discountType ?? "percentage";
-            const discountValue: number = couponData.discountValue ?? 0;
+      // Check usage limit (pre-check; atomic enforcement happens in verifyAndBook)
+      const usageCount: number = couponData.usageCount ?? 0;
+      const usageLimit: number = couponData.usageLimit ?? 100;
+      if (usageCount >= usageLimit) {
+        throw new functions.HttpsError(
+          "resource-exhausted",
+          "This coupon has reached its usage limit"
+        );
+      }
 
-            if (discountType === "percentage") {
-              couponDiscount = Math.round(subtotalInPaise * (discountValue / 100));
-            } else {
-              couponDiscount = Math.round(discountValue * 100);
-            }
-
-            discountedAmountInPaise = Math.max(100, subtotalInPaise - couponDiscount);
-            couponDiscount = subtotalInPaise - discountedAmountInPaise;
-            couponDocId = couponDoc.id;
-          }
+      // Check restricted emails
+      const restrictedEmails: string[] | undefined = couponData.restrictedEmails;
+      if (restrictedEmails && restrictedEmails.length > 0) {
+        const userRecord = await admin.auth().getUser(request.auth.uid);
+        if (!restrictedEmails.includes(userRecord.email ?? "")) {
+          throw new functions.HttpsError(
+            "permission-denied",
+            "This coupon is not valid for your account"
+          );
         }
       }
+
+      const discountType: string = couponData.discountType ?? "percentage";
+      const discountValue: number = couponData.discountValue ?? 0;
+
+      if (discountType === "percentage") {
+        couponDiscount = Math.round(subtotalInPaise * (discountValue / 100));
+      } else {
+        couponDiscount = Math.round(discountValue * 100);
+      }
+
+      discountedAmountInPaise = Math.max(100, subtotalInPaise - couponDiscount);
+      couponDiscount = subtotalInPaise - discountedAmountInPaise;
+      couponDocId = couponDoc.id;
     }
 
     // ── 3. Create Razorpay order ───────────────────────────────────────────

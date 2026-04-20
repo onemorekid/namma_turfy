@@ -7,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:namma_turfy/core/services/razorpay_service.dart';
 import 'package:namma_turfy/core/services/razorpay_service_impl.dart';
+import 'package:namma_turfy/core/theme/app_colors.dart';
+import 'package:namma_turfy/core/theme/app_spacing.dart';
+import 'package:namma_turfy/core/theme/app_text_styles.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
@@ -63,9 +66,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _showError(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: AppColors.error),
+    );
   }
 
   double get _subtotal => widget.slots.fold(0.0, (s, slot) => s + slot.price);
@@ -109,7 +112,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Coupon $code applied!'),
-        backgroundColor: Colors.green,
+        backgroundColor: AppColors.primary,
       ),
     );
   }
@@ -137,7 +140,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           content: Text(
             'Slot hold expired (10 min). Please select slots again.',
           ),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.peakTime,
         ),
       );
       context.go('/venue/${widget.venue.id}');
@@ -158,6 +161,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final data = Map<String, dynamic>.from(result.data as Map);
       _pendingOrderId = data['orderId'] as String;
       debugPrint('[Checkout] createOrder success: $_pendingOrderId');
+
+      // Validate server-side discount matches client expectation
+      if (_appliedCouponCode != null) {
+        final serverDiscount = (data['discountApplied'] as num).toDouble();
+        final clientDiscountPaise = (_discount * 100).round();
+        if ((serverDiscount - clientDiscountPaise).abs() > 1) {
+          debugPrint(
+            '[Checkout] Discount mismatch: server=$serverDiscount, client=$clientDiscountPaise',
+          );
+          if (!mounted) return;
+          setState(() => _isProcessing = false);
+          _showError(
+            'Coupon could not be applied server-side. Please try again.',
+          );
+          return;
+        }
+      }
 
       // Parse amount safely — mobile web returns doubles (e.g. 50000.0),
       // desktop web may return int or fixnum.Int64. Cast via num to handle all.
@@ -326,95 +346,98 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final orderReady = _pendingOptions != null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: const Text('Checkout'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Booking Summary ──────────────────────────────────────────
-            Text(
-              'Booking Summary',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _SummaryRow(label: 'Venue', value: widget.venue.name),
-                    _SummaryRow(
-                      label: 'Date',
-                      value: DateFormat(
-                        'MMM dd, yyyy',
-                      ).format(widget.slots.first.startTime),
+            // ── Booking Summary ────────────────────────────────────────────
+            Text('Booking Summary', style: AppTextStyles.titleMedium),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: const Border.fromBorderSide(
+                    BorderSide(color: AppColors.outline)),
+              ),
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                children: [
+                  _SummaryRow(label: 'Venue', value: widget.venue.name),
+                  _SummaryRow(
+                    label: 'Date',
+                    value: DateFormat('MMM dd, yyyy')
+                        .format(widget.slots.first.startTime),
+                  ),
+                  _SummaryRow(
+                      label: 'Slots', value: '${widget.slots.length}'),
+                  const Divider(height: AppSpacing.md),
+                  ...widget.slots.map(
+                    (s) => _SummaryRow(
+                      label: DateFormat('hh:mm a').format(s.startTime),
+                      value: '₹${s.price.toStringAsFixed(0)}',
+                      isSmall: true,
                     ),
-                    _SummaryRow(
-                      label: 'Slots',
-                      value: '${widget.slots.length}',
-                    ),
-                    const Divider(),
-                    ...widget.slots.map(
-                      (s) => _SummaryRow(
-                        label: DateFormat('hh:mm a').format(s.startTime),
-                        value: '₹${s.price.toStringAsFixed(0)}',
-                        isSmall: true,
-                      ),
-                    ),
-                    const Divider(),
-                    _SummaryRow(
+                  ),
+                  const Divider(height: AppSpacing.md),
+                  _SummaryRow(
                       label: 'Subtotal',
-                      value: '₹${_subtotal.toStringAsFixed(0)}',
-                    ),
-                    if (_discount > 0)
-                      _SummaryRow(
-                        label: 'Coupon ($_appliedCouponCode)',
-                        value: '- ₹${_discount.toStringAsFixed(0)}',
-                        color: Colors.green,
-                      ),
+                      value: '₹${_subtotal.toStringAsFixed(0)}'),
+                  if (_discount > 0)
                     _SummaryRow(
-                      label: 'Total Payable',
-                      value: '₹${_total.toStringAsFixed(0)}',
-                      isBold: true,
+                      label: 'Coupon ($_appliedCouponCode)',
+                      value: '- ₹${_discount.toStringAsFixed(0)}',
+                      color: AppColors.primary,
                     ),
-                  ],
-                ),
+                  _SummaryRow(
+                    label: 'Total Payable',
+                    value: '₹${_total.toStringAsFixed(0)}',
+                    isBold: true,
+                  ),
+                ],
               ),
             ),
 
-            // ── Slot hold notice ─────────────────────────────────────────
+            // ── Slot hold notice ───────────────────────────────────────────
+            const SizedBox(height: AppSpacing.sm),
             Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[200]!),
+                color: AppColors.offerBg,
+                borderRadius: BorderRadius.circular(10),
+                border: const Border.fromBorderSide(
+                    BorderSide(color: AppColors.offer)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.lock_clock, color: Colors.orange, size: 16),
-                  SizedBox(width: 8),
+                  const Icon(Icons.lock_clock,
+                      color: AppColors.offer, size: 16),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Slots are held for 10 minutes. Complete payment before time runs out.',
-                      style: TextStyle(fontSize: 12, color: Colors.orange),
+                      'Slots held for 10 minutes. Complete payment soon.',
+                      style: AppTextStyles.bodySmall
+                          .copyWith(color: AppColors.offer),
                     ),
                   ),
                 ],
               ),
             ),
 
-            // ── Promo Code ───────────────────────────────────────────────
-            const SizedBox(height: 24),
-            const Text(
-              'Promo Code',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
+            // ── Promo Code ─────────────────────────────────────────────────
+            const SizedBox(height: AppSpacing.lg),
+            Text('Promo Code', style: AppTextStyles.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Expanded(
@@ -424,78 +447,75 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     enabled: _appliedCouponCode == null,
                     decoration: InputDecoration(
                       hintText: 'Enter code (e.g. SAVE20)',
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 14,
-                      ),
                       suffixIcon: _appliedCouponCode != null
-                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          ? const Icon(Icons.check_circle,
+                              color: AppColors.primary)
                           : null,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _appliedCouponCode != null ? null : _applyPromo,
-                  child: const Text('Apply'),
+                const SizedBox(width: AppSpacing.sm),
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed:
+                        _appliedCouponCode != null ? null : _applyPromo,
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: Size.zero,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md),
+                    ),
+                    child: const Text('Apply'),
+                  ),
                 ),
               ],
             ),
 
-            // ── Platform fee disclosure ───────────────────────────────────
-            const SizedBox(height: 24),
-
-            // Platform fee row hidden — commission collection disabled
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
           ],
         ),
       ),
 
-      // ── Bottom button ─────────────────────────────────────────────────────
+      // ── Bottom CTA ─────────────────────────────────────────────────────────
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.ctaBottom),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: AppColors.shadowFloat,
+              blurRadius: 12,
+              offset: Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
+          top: false,
           child: ElevatedButton(
-            // On web: first tap → createOrder (shows "Open Payment" next)
-            //          second tap → opens Razorpay modal (direct user gesture)
-            // On mobile: single tap → createOrder + opens SDK immediately
             onPressed: _isProcessing
                 ? null
                 : (orderReady ? _openWebPayment : _startPayment),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 56),
-              backgroundColor: orderReady
-                  ? const Color(0xFF1E88E5)
-                  : const Color(0xFF35CA67),
+              backgroundColor:
+                  orderReady ? const Color(0xFF1E88E5) : AppColors.primary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: _isProcessing
                 ? const SizedBox(
                     height: 24,
                     width: 24,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
+                        color: Colors.white, strokeWidth: 2),
                   )
                 : Text(
                     orderReady
                         ? 'Open Payment Gateway'
-                        : 'Proceed to Payment ₹${_total.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                        : 'Proceed to Payment  ₹${_total.toStringAsFixed(0)}',
+                    style: AppTextStyles.labelLarge
+                        .copyWith(color: Colors.white),
                   ),
           ),
         ),
@@ -523,6 +543,7 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseStyle = isSmall ? AppTextStyles.bodySmall : AppTextStyles.bodyMedium;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -530,19 +551,17 @@ class _SummaryRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: isSmall ? 12 : 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: color ?? Colors.grey[700],
-            ),
+            style: baseStyle.copyWith(color: AppColors.onSurfaceVar),
           ),
           Text(
             value,
-            style: TextStyle(
-              fontSize: isSmall ? 12 : 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: color ?? Colors.black,
-            ),
+            style: isBold
+                ? AppTextStyles.titleMedium
+                    .copyWith(color: color ?? AppColors.onSurface)
+                : baseStyle.copyWith(
+                    color: color ?? AppColors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
           ),
         ],
       ),

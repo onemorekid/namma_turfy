@@ -240,9 +240,11 @@ export const verifyAndBook = functions.onCall(
 
           // Audit record for this coupon use
           const usageLogRef = db.collection("coupon_usages").doc();
+          const couponOwnerId: string = couponTx.data()?.ownerId ?? "";
           tx.set(usageLogRef, {
             couponId: couponDocId,
             couponCode: couponCode!.toUpperCase(),
+            ownerId: couponOwnerId,
             playerId,
             bookingId: bookingRef.id,
             discountApplied: discount,

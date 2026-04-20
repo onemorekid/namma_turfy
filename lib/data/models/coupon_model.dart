@@ -10,6 +10,7 @@ class CouponModel extends Coupon {
     required super.discountValue,
     required super.validTo,
     super.usageLimit,
+    super.usageCount,
     super.restrictedEmails,
   });
 
@@ -24,6 +25,7 @@ class CouponModel extends Coupon {
       discountValue: (json['discountValue'] as num?)?.toDouble() ?? 0.0,
       validTo: _parseDateTime(json['validTo']),
       usageLimit: (json['usageLimit'] as num?)?.toInt() ?? 100,
+      usageCount: (json['usageCount'] as num?)?.toInt() ?? 0,
       restrictedEmails: (json['restrictedEmails'] as List?)?.cast<String>(),
     );
   }
@@ -47,6 +49,7 @@ class CouponModel extends Coupon {
     'discountValue': discountValue,
     'validTo': validTo.toIso8601String(),
     'usageLimit': usageLimit,
+    'usageCount': usageCount,
     if (restrictedEmails != null) 'restrictedEmails': restrictedEmails,
   };
 

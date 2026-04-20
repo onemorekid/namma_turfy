@@ -127,7 +127,7 @@ class BookingRepositoryImpl implements BookingRepository {
     return _firestore
         .collection('bookings')
         .where('playerId', isEqualTo: playerId)
-        .orderBy('date', descending: true)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => BookingModel.fromSnapshot(d)).toList());
   }

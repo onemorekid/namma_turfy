@@ -19,7 +19,7 @@ export const settleOwnerPayouts = functions.onSchedule(
   {
     schedule: "30 3 * * 1", // Every Monday 3:30 AM UTC = 9:00 AM IST
     timeZone: "UTC",
-    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"],
+    secrets: ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_PAYOUT_ACCOUNT"],
   },
   async () => {
     const db = admin.firestore();

@@ -29,6 +29,7 @@ class Booking {
   final String? sportType;
   final String? playerName;
   final String? playerPhone;
+  final String? couponCode;
 
   // Razorpay audit trail
   final String? razorpayOrderId;
@@ -59,6 +60,7 @@ class Booking {
     this.sportType,
     this.playerName,
     this.playerPhone,
+    this.couponCode,
     this.razorpayOrderId,
     this.razorpayPaymentId,
     this.razorpaySignature,

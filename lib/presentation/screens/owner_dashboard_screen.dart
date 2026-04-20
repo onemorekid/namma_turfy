@@ -2,18 +2,21 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:namma_turfy/core/services/storage_service.dart';
 import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
+import 'package:namma_turfy/domain/entities/user.dart';
 import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
-import 'package:namma_turfy/presentation/widgets/app_drawer.dart';
+import 'package:namma_turfy/core/theme/app_colors.dart';
+import 'package:namma_turfy/core/theme/app_text_styles.dart';
 import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
@@ -36,6 +39,18 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       appBar: AppBar(
         title: const Text('Owner Dashboard'),
         actions: [
+          // Switch to player mode — only shown if user also has the player role
+          if (user?.roles.contains(UserRole.player) == true)
+            IconButton(
+              icon: const Icon(Icons.sports_soccer_outlined),
+              tooltip: 'Switch to Player Mode',
+              onPressed: () async {
+                await ref
+                    .read(authRepositoryProvider)
+                    .switchRole(UserRole.player);
+                if (context.mounted) context.go('/');
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () =>
@@ -43,7 +58,6 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
           ),
         ],
       ),
-      drawer: const AppDrawer(),
       body: venueAsync.when(
         data: (venue) {
           if (venue == null) {
@@ -71,8 +85,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: const Color(0xFF35CA67),
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.outlineVariant,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.stadium), label: 'Venue'),
@@ -197,7 +211,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -380,7 +394,7 @@ class _VenueManager extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -477,7 +491,7 @@ class _VenueManager extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -520,7 +534,7 @@ class _ZoneItem extends ConsumerWidget {
           ListTile(
             title: Text(
               zone.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleMedium,
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -552,7 +566,7 @@ class _ZoneItem extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Cannot add slots in the past.'),
-                          backgroundColor: Colors.orange,
+                          backgroundColor: AppColors.peakTime,
                         ),
                       );
                       return;
@@ -587,7 +601,7 @@ class _ZoneItem extends ConsumerWidget {
                     padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Text(
                       'No slots yet',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: AppColors.onSurfaceVar),
                     ),
                   )
                 : SizedBox(
@@ -629,7 +643,7 @@ class _ZoneItem extends ConsumerWidget {
                                     },
                                     child: const Text(
                                       'Delete',
-                                      style: TextStyle(color: Colors.red),
+                                      style: TextStyle(color: AppColors.error),
                                     ),
                                   ),
                                 ],
@@ -646,13 +660,13 @@ class _ZoneItem extends ConsumerWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: slot.status == SlotStatus.available
-                                      ? Colors.green[100]
-                                      : Colors.grey[200],
+                                      ? AppColors.primaryLight
+                                      : AppColors.surfaceVariant,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: slot.status == SlotStatus.available
-                                        ? Colors.green
-                                        : Colors.grey,
+                                        ? AppColors.primary
+                                        : AppColors.outlineVariant,
                                   ),
                                 ),
                                 child: Text(
@@ -683,7 +697,7 @@ class _ZoneItem extends ConsumerWidget {
                                     child: const Icon(
                                       Icons.cancel,
                                       size: 14,
-                                      color: Colors.red,
+                                      color: AppColors.error,
                                     ),
                                   ),
                                 ),
@@ -861,7 +875,7 @@ class _ZoneItem extends ConsumerWidget {
                             content: Text(
                               'No future slots were generated. Check your time range.',
                             ),
-                            backgroundColor: Colors.orange,
+                            backgroundColor: AppColors.peakTime,
                           ),
                         );
                         Navigator.pop(context);
@@ -882,7 +896,7 @@ class _ZoneItem extends ConsumerWidget {
                               content: Text(
                                 'Failed to generate slots: ${e.toString()}',
                               ),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -933,7 +947,7 @@ class _BookingsList extends ConsumerWidget {
                 isThreeLine: true,
                 title: Text(
                   '${booking.playerName ?? "Player"} • Booking #$shortId',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.titleMedium,
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -945,15 +959,43 @@ class _BookingsList extends ConsumerWidget {
                     Text(
                       '${booking.sportType ?? ""} • ${booking.zoneName ?? "Zone"} • ${booking.slotIds.length} slot(s)',
                     ),
+                    if (booking.couponCode != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.offerBg,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(
+                              color: AppColors.offer.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            'COUPON: ${booking.couponCode} (₹${(booking.totalPrice - (booking.discountedPrice ?? booking.totalPrice)).toStringAsFixed(0)} off)',
+                            style: const TextStyle(
+                              color: AppColors.offer,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                     if (booking.playerPhone != null)
-                      Text('Contact: ${booking.playerPhone}'),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('Contact: ${booking.playerPhone}'),
+                      ),
                   ],
                 ),
                 trailing: Text(
                   '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -1005,33 +1047,7 @@ class _CouponsManager extends ConsumerWidget {
                 return ListView.builder(
                   itemCount: coupons.length,
                   itemBuilder: (context, index) {
-                    final coupon = coupons[index];
-                    return Card(
-                      child: ListTile(
-                        title: Text(
-                          coupon.code,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'monospace',
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${coupon.discountType == DiscountType.percentage ? '${coupon.discountValue.toStringAsFixed(0)}% Off' : '₹${coupon.discountValue.toStringAsFixed(0)} Flat'} '
-                          '• Valid till ${DateFormat('dd MMM').format(coupon.validTo)}'
-                          '${coupon.restrictedEmails != null && coupon.restrictedEmails!.isNotEmpty ? ' • ${coupon.restrictedEmails!.length} users' : ''}',
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(
-                            Icons.delete,
-                            color: Colors.red,
-                            size: 20,
-                          ),
-                          onPressed: () => ref
-                              .read(venueRepositoryProvider)
-                              .deleteCoupon(coupon.id),
-                        ),
-                      ),
-                    );
+                    return _CouponCard(coupon: coupons[index]);
                   },
                 );
               },
@@ -1040,6 +1056,133 @@ class _CouponsManager extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  static void _confirmDeleteCoupon(
+    BuildContext context,
+    WidgetRef ref,
+    Coupon coupon,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Coupon?'),
+        content: Text('Are you sure you want to delete ${coupon.code}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(venueRepositoryProvider).deleteCoupon(coupon.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static void _showEditCouponDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Coupon coupon,
+  ) {
+    final limitController = TextEditingController(
+      text: coupon.usageLimit.toString(),
+    );
+    final emailsController = TextEditingController(
+      text: coupon.restrictedEmails?.join(', ') ?? '',
+    );
+    DateTime selectedDate = coupon.validTo;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Edit Coupon ${coupon.code}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Code, type, and value cannot be changed once created.',
+                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVar),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: limitController,
+                  decoration: const InputDecoration(labelText: 'Usage Limit'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Valid Until'),
+                  subtitle: Text(DateFormat('yyyy-MM-dd').format(selectedDate)),
+                  trailing: const Icon(Icons.calendar_today),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now().isBefore(coupon.validTo)
+                          ? DateTime.now()
+                          : coupon.validTo,
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                TextField(
+                  controller: emailsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Restrict to Emails (Optional)',
+                    hintText: 'user1@email.com, user2@email.com',
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final emails = emailsController.text
+                    .split(',')
+                    .map((e) => e.trim())
+                    .where((e) => e.isNotEmpty)
+                    .toList();
+
+                final updated = Coupon(
+                  id: coupon.id,
+                  ownerId: coupon.ownerId,
+                  code: coupon.code,
+                  discountType: coupon.discountType,
+                  discountValue: coupon.discountValue,
+                  validTo: selectedDate,
+                  usageLimit:
+                      int.tryParse(limitController.text) ?? coupon.usageLimit,
+                  usageCount: coupon.usageCount,
+                  restrictedEmails: emails.isEmpty ? null : emails,
+                );
+
+                ref.read(venueRepositoryProvider).saveCoupon(updated);
+                Navigator.pop(context);
+              },
+              child: const Text('Update'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1170,6 +1313,223 @@ class _CouponsManager extends ConsumerWidget {
   }
 }
 
+class _CouponCard extends ConsumerStatefulWidget {
+  final Coupon coupon;
+  const _CouponCard({required this.coupon});
+
+  @override
+  ConsumerState<_CouponCard> createState() => _CouponCardState();
+}
+
+class _CouponCardState extends ConsumerState<_CouponCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final coupon = widget.coupon;
+    final now = DateTime.now();
+    final isExpired = coupon.validTo.isBefore(now);
+    final isExhausted = coupon.usageCount >= coupon.usageLimit;
+
+    String statusLabel = 'Active';
+    Color statusColor = AppColors.primary;
+
+    if (isExpired) {
+      statusLabel = 'Expired';
+      statusColor = AppColors.outlineVariant;
+    } else if (isExhausted) {
+      statusLabel = 'Exhausted';
+      statusColor = AppColors.peakTime;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          ListTile(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            title: Row(
+              children: [
+                Text(
+                  coupon.code,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Text(
+              '${coupon.discountType == DiscountType.percentage ? '${coupon.discountValue.toStringAsFixed(0)}% Off' : '₹${coupon.discountValue.toStringAsFixed(0)} Flat'} '
+              '• Valid till ${DateFormat('dd MMM yyyy').format(coupon.validTo)}',
+            ),
+            trailing: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),
+          ),
+          if (_isExpanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Usage Status',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${coupon.usageCount} / ${coupon.usageLimit} redemptions',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Analytics Panel
+                  _CouponAnalyticsPanel(
+                    couponId: coupon.id,
+                    ownerId: coupon.ownerId,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _CouponsManager._showEditCouponDialog(
+                          context,
+                          ref,
+                          coupon,
+                        ),
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit'),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () => _CouponsManager._confirmDeleteCoupon(
+                          context,
+                          ref,
+                          coupon,
+                        ),
+                        icon: const Icon(Icons.delete, size: 18),
+                        label: const Text('Delete'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CouponAnalyticsPanel extends ConsumerWidget {
+  final String couponId;
+  final String ownerId;
+  const _CouponAnalyticsPanel({
+    required this.couponId,
+    required this.ownerId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usagesAsync = ref.watch(
+      couponUsagesProvider((couponId: couponId, ownerId: ownerId)),
+    );
+
+    return usagesAsync.when(
+      data: (usages) {
+        if (usages.isEmpty) {
+          return const Text(
+            'No redemptions yet.',
+            style: TextStyle(color: AppColors.onSurfaceVar, fontSize: 13),
+          );
+        }
+
+        final totalDiscount = usages.fold(
+          0.0,
+          (sum, u) => sum + u.discountApplied,
+        );
+        final lastUsed = usages.first.createdAt;
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.outline),
+          ),
+          child: Column(
+            children: [
+              _AnalyticsRow(
+                label: 'Total Discount Given',
+                value: '₹${totalDiscount.toStringAsFixed(0)}',
+              ),
+              const SizedBox(height: 4),
+              _AnalyticsRow(
+                label: 'Last Redeemed',
+                value: DateFormat('dd MMM, hh:mm a').format(lastUsed),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const LinearProgressIndicator(),
+      error: (e, st) => Text(
+        'Analytics error: $e',
+        style: const TextStyle(fontSize: 12, color: AppColors.error),
+      ),
+    );
+  }
+}
+
+class _AnalyticsRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _AnalyticsRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
 class _EarningsDashboard extends ConsumerWidget {
   final Venue venue;
   const _EarningsDashboard({required this.venue});
@@ -1203,7 +1563,7 @@ class _EarningsDashboard extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Total Bookings',
                       value: '$totalBookings',
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1211,7 +1571,7 @@ class _EarningsDashboard extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Net Revenue',
                       value: '₹${netRevenue.toStringAsFixed(0)}',
-                      color: Colors.green,
+                      color: AppColors.primaryDark,
                     ),
                   ),
                 ],
@@ -1220,18 +1580,18 @@ class _EarningsDashboard extends ConsumerWidget {
               _StatCard(
                 label: 'Avg Booking Value',
                 value: '₹${avgBooking.toStringAsFixed(0)}',
-                color: Colors.orange,
+                color: AppColors.peakTime,
               ),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'Recent Transactions',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: AppTextStyles.titleMedium,
               ),
               const SizedBox(height: 8),
               if (bookings.isEmpty)
                 const Text(
                   'No transactions yet.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.onSurfaceVar),
                 )
               else
                 Card(
@@ -1250,7 +1610,7 @@ class _EarningsDashboard extends ConsumerWidget {
                         trailing: Text(
                           '+ ₹${(b.discountedPrice ?? b.totalPrice).toStringAsFixed(0)}',
                           style: const TextStyle(
-                            color: Colors.green,
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1289,7 +1649,7 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1330,12 +1690,10 @@ class _OwnerDatePicker extends ConsumerWidget {
               width: 56,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF35CA67) : Colors.white,
+                color: isSelected ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF35CA67)
-                      : Colors.grey[300]!,
+                  color: isSelected ? AppColors.primary : AppColors.outline,
                 ),
               ),
               child: Column(
@@ -1345,14 +1703,14 @@ class _OwnerDatePicker extends ConsumerWidget {
                     DateFormat('E').format(date),
                     style: TextStyle(
                       fontSize: 11,
-                      color: isSelected ? Colors.white : Colors.grey,
+                      color: isSelected ? Colors.white : AppColors.onSurfaceVar,
                     ),
                   ),
                   Text(
                     DateFormat('d').format(date),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : Colors.black,
+                      color: isSelected ? Colors.white : AppColors.onSurface,
                     ),
                   ),
                 ],
@@ -1392,7 +1750,7 @@ class _ImagePickerSection extends StatelessWidget {
           children: [
             const Text(
               'Photos',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: AppColors.onSurfaceVar, fontSize: 12),
             ),
             const Spacer(),
             TextButton.icon(
@@ -1445,13 +1803,13 @@ class _ImagePickerSection extends StatelessWidget {
             height: 70,
             width: double.infinity,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: AppColors.outline),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Center(
               child: Text(
                 'No photos yet',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.onSurfaceVar),
               ),
             ),
           ),

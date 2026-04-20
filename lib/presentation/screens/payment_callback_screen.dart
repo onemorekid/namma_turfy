@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -76,7 +77,37 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
       return;
     }
 
+    // ── Wait for Firebase Auth to restore session ─────────────────────────
+    // After a Razorpay mobile-web redirect the page does a full reload.
+    // Firebase Auth restores the session from IndexedDB asynchronously, so
+    // we must wait for a non-null user before calling the authenticated
+    // Cloud Function — otherwise the callable fires unauthenticated and the
+    // server rejects it with "unauthenticated" (no booking is created, no log).
     try {
+      setState(() => _status = 'Restoring session…');
+      await FirebaseAuth.instance
+          .authStateChanges()
+          .firstWhere((user) => user != null)
+          .timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception(
+            'Session restore timed out. Please log in again and check My Bookings.',
+          );
+        },
+      );
+      debugPrint('[Callback] Auth session restored');
+    } catch (e) {
+      debugPrint('[Callback] Auth restore failed: $e');
+      setState(() {
+        _failed = true;
+        _status = e.toString();
+      });
+      return;
+    }
+
+    try {
+      setState(() => _status = 'Confirming your booking…');
       debugPrint('[Callback] Calling verifyAndBook');
       final result = await FirebaseFunctions.instance
           .httpsCallable('verifyAndBook')
