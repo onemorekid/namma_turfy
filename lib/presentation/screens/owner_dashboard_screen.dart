@@ -13,7 +13,8 @@ import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
-import 'package:namma_turfy/presentation/widgets/app_drawer.dart';
+import 'package:namma_turfy/core/theme/app_colors.dart';
+import 'package:namma_turfy/core/theme/app_text_styles.dart';
 import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
@@ -43,7 +44,6 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
           ),
         ],
       ),
-      drawer: const AppDrawer(),
       body: venueAsync.when(
         data: (venue) {
           if (venue == null) {
@@ -71,8 +71,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: const Color(0xFF35CA67),
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.outlineVariant,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.stadium), label: 'Venue'),
@@ -197,7 +197,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -380,7 +380,7 @@ class _VenueManager extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -477,7 +477,7 @@ class _VenueManager extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -520,7 +520,7 @@ class _ZoneItem extends ConsumerWidget {
           ListTile(
             title: Text(
               zone.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: AppTextStyles.titleMedium,
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -552,7 +552,7 @@ class _ZoneItem extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Cannot add slots in the past.'),
-                          backgroundColor: Colors.orange,
+                          backgroundColor: AppColors.peakTime,
                         ),
                       );
                       return;
@@ -587,7 +587,7 @@ class _ZoneItem extends ConsumerWidget {
                     padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
                     child: Text(
                       'No slots yet',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: AppColors.onSurfaceVar),
                     ),
                   )
                 : SizedBox(
@@ -629,7 +629,7 @@ class _ZoneItem extends ConsumerWidget {
                                     },
                                     child: const Text(
                                       'Delete',
-                                      style: TextStyle(color: Colors.red),
+                                      style: TextStyle(color: AppColors.error),
                                     ),
                                   ),
                                 ],
@@ -646,13 +646,13 @@ class _ZoneItem extends ConsumerWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: slot.status == SlotStatus.available
-                                      ? Colors.green[100]
-                                      : Colors.grey[200],
+                                      ? AppColors.primaryLight
+                                      : AppColors.surfaceVariant,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: slot.status == SlotStatus.available
-                                        ? Colors.green
-                                        : Colors.grey,
+                                        ? AppColors.primary
+                                        : AppColors.outlineVariant,
                                   ),
                                 ),
                                 child: Text(
@@ -683,7 +683,7 @@ class _ZoneItem extends ConsumerWidget {
                                     child: const Icon(
                                       Icons.cancel,
                                       size: 14,
-                                      color: Colors.red,
+                                      color: AppColors.error,
                                     ),
                                   ),
                                 ),
@@ -861,7 +861,7 @@ class _ZoneItem extends ConsumerWidget {
                             content: Text(
                               'No future slots were generated. Check your time range.',
                             ),
-                            backgroundColor: Colors.orange,
+                            backgroundColor: AppColors.peakTime,
                           ),
                         );
                         Navigator.pop(context);
@@ -882,7 +882,7 @@ class _ZoneItem extends ConsumerWidget {
                               content: Text(
                                 'Failed to generate slots: ${e.toString()}',
                               ),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.error,
                             ),
                           );
                         }
@@ -933,7 +933,7 @@ class _BookingsList extends ConsumerWidget {
                 isThreeLine: true,
                 title: Text(
                   '${booking.playerName ?? "Player"} • Booking #$shortId',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.titleMedium,
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -954,16 +954,16 @@ class _BookingsList extends ConsumerWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
+                            color: AppColors.offerBg,
                             borderRadius: BorderRadius.circular(4),
                             border: Border.all(
-                              color: Colors.orange.withValues(alpha: 0.3),
+                              color: AppColors.offer.withValues(alpha: 0.4),
                             ),
                           ),
                           child: Text(
                             'COUPON: ${booking.couponCode} (₹${(booking.totalPrice - (booking.discountedPrice ?? booking.totalPrice)).toStringAsFixed(0)} off)',
                             style: const TextStyle(
-                              color: Colors.orange,
+                              color: AppColors.offer,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -981,7 +981,7 @@ class _BookingsList extends ConsumerWidget {
                   '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                    color: AppColors.primary,
                   ),
                 ),
               ),
@@ -1066,7 +1066,7 @@ class _CouponsManager extends ConsumerWidget {
               ref.read(venueRepositoryProvider).deleteCoupon(coupon.id);
               Navigator.pop(context);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -1097,7 +1097,7 @@ class _CouponsManager extends ConsumerWidget {
               children: [
                 const Text(
                   'Code, type, and value cannot be changed once created.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVar),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -1318,14 +1318,14 @@ class _CouponCardState extends ConsumerState<_CouponCard> {
     final isExhausted = coupon.usageCount >= coupon.usageLimit;
 
     String statusLabel = 'Active';
-    Color statusColor = Colors.green;
+    Color statusColor = AppColors.primary;
 
     if (isExpired) {
       statusLabel = 'Expired';
-      statusColor = Colors.grey;
+      statusColor = AppColors.outlineVariant;
     } else if (isExhausted) {
       statusLabel = 'Exhausted';
-      statusColor = Colors.orange;
+      statusColor = AppColors.peakTime;
     }
 
     return Card(
@@ -1419,7 +1419,7 @@ class _CouponCardState extends ConsumerState<_CouponCard> {
                         icon: const Icon(Icons.delete, size: 18),
                         label: const Text('Delete'),
                         style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                          foregroundColor: AppColors.error,
                         ),
                       ),
                     ],
@@ -1446,7 +1446,7 @@ class _CouponAnalyticsPanel extends ConsumerWidget {
         if (usages.isEmpty) {
           return const Text(
             'No redemptions yet.',
-            style: TextStyle(color: Colors.grey, fontSize: 13),
+            style: TextStyle(color: AppColors.onSurfaceVar, fontSize: 13),
           );
         }
 
@@ -1459,9 +1459,9 @@ class _CouponAnalyticsPanel extends ConsumerWidget {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: AppColors.surfaceVariant,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+            border: Border.all(color: AppColors.outline),
           ),
           child: Column(
             children: [
@@ -1481,7 +1481,7 @@ class _CouponAnalyticsPanel extends ConsumerWidget {
       loading: () => const LinearProgressIndicator(),
       error: (e, st) => Text(
         'Analytics error: $e',
-        style: const TextStyle(fontSize: 12, color: Colors.red),
+        style: const TextStyle(fontSize: 12, color: AppColors.error),
       ),
     );
   }
@@ -1497,7 +1497,7 @@ class _AnalyticsRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar)),
         Text(
           value,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
@@ -1540,7 +1540,7 @@ class _EarningsDashboard extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Total Bookings',
                       value: '$totalBookings',
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1548,7 +1548,7 @@ class _EarningsDashboard extends ConsumerWidget {
                     child: _StatCard(
                       label: 'Net Revenue',
                       value: '₹${netRevenue.toStringAsFixed(0)}',
-                      color: Colors.green,
+                      color: AppColors.primaryDark,
                     ),
                   ),
                 ],
@@ -1557,18 +1557,18 @@ class _EarningsDashboard extends ConsumerWidget {
               _StatCard(
                 label: 'Avg Booking Value',
                 value: '₹${avgBooking.toStringAsFixed(0)}',
-                color: Colors.orange,
+                color: AppColors.peakTime,
               ),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'Recent Transactions',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: AppTextStyles.titleMedium,
               ),
               const SizedBox(height: 8),
               if (bookings.isEmpty)
                 const Text(
                   'No transactions yet.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(color: AppColors.onSurfaceVar),
                 )
               else
                 Card(
@@ -1587,7 +1587,7 @@ class _EarningsDashboard extends ConsumerWidget {
                         trailing: Text(
                           '+ ₹${(b.discountedPrice ?? b.totalPrice).toStringAsFixed(0)}',
                           style: const TextStyle(
-                            color: Colors.green,
+                            color: AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1626,7 +1626,7 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1667,12 +1667,10 @@ class _OwnerDatePicker extends ConsumerWidget {
               width: 56,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF35CA67) : Colors.white,
+                color: isSelected ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFF35CA67)
-                      : Colors.grey[300]!,
+                  color: isSelected ? AppColors.primary : AppColors.outline,
                 ),
               ),
               child: Column(
@@ -1682,14 +1680,14 @@ class _OwnerDatePicker extends ConsumerWidget {
                     DateFormat('E').format(date),
                     style: TextStyle(
                       fontSize: 11,
-                      color: isSelected ? Colors.white : Colors.grey,
+                      color: isSelected ? Colors.white : AppColors.onSurfaceVar,
                     ),
                   ),
                   Text(
                     DateFormat('d').format(date),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.white : Colors.black,
+                      color: isSelected ? Colors.white : AppColors.onSurface,
                     ),
                   ),
                 ],
@@ -1729,7 +1727,7 @@ class _ImagePickerSection extends StatelessWidget {
           children: [
             const Text(
               'Photos',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: AppColors.onSurfaceVar, fontSize: 12),
             ),
             const Spacer(),
             TextButton.icon(
@@ -1782,13 +1780,13 @@ class _ImagePickerSection extends StatelessWidget {
             height: 70,
             width: double.infinity,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: AppColors.outline),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Center(
               child: Text(
                 'No photos yet',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.onSurfaceVar),
               ),
             ),
           ),

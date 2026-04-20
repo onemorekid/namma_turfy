@@ -67,8 +67,11 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.surface,
-          minimumSize: const Size(double.infinity, 56),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          // Use a compact default so buttons in Rows/dialogs don't overflow.
+          // Full-width CTAs should set minimumSize: const Size(double.infinity, 56)
+          // explicitly, or wrap in SizedBox(width: double.infinity, height: 56).
+          minimumSize: const Size(64, 40),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           elevation: 0,
           textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
