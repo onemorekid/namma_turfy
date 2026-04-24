@@ -20,7 +20,8 @@ class LoginScreen extends ConsumerWidget {
           Image.network(
             'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200',
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(color: AppColors.primaryDark),
+            errorBuilder: (_, __, ___) =>
+                Container(color: AppColors.primaryDark),
           ),
 
           // ── Dark overlay (55% opacity) ────────────────────────────────────
@@ -78,8 +79,9 @@ class LoginScreen extends ConsumerWidget {
                         ),
                         label: Text(
                           'Continue with Google',
-                          style: AppTextStyles.labelLarge
-                              .copyWith(color: Colors.white),
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -105,8 +107,9 @@ class LoginScreen extends ConsumerWidget {
                       ),
                       child: Text(
                         authState.error.toString(),
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.error),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.error,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),

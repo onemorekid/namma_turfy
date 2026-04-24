@@ -85,3 +85,14 @@ After completing each phase, the agent MUST:
 4. Update this `IMPLEMENTATION.md` file to check off completed steps.
 5. Use the `/commit` command to automatically generate a meaningful, semantic commit message and commit the changes.
 6. Execute `git push` to push the changes to the remote repository.
+
+---
+
+## Phase 7: Improvements & Batch 1 Features
+**Goal:** Implement the next batch of improvements as defined in FEATURE_DEFINITIONS.md.
+
+*   [x] **Step 7.1: Time Filter Fix & Version Display (F-06, F-01)**
+*   [x] **Step 7.2: Min Slot Price & Offers on Venue Card (F-05, F-07)**
+*   [x] **Step 7.3: Peak Hours Configuration (F-04)**
+*   [x] **Step 7.4: Slot Generation Overhaul (F-03)**
+*   [x] **Step 7.5: Richer Venue/Zone Forms & Map Integration (F-02)**

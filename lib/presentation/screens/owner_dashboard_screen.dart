@@ -1,11 +1,7 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:namma_turfy/core/services/storage_service.dart';
 import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/domain/entities/coupon.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
@@ -17,7 +13,9 @@ import 'package:namma_turfy/presentation/providers/booking_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
 import 'package:namma_turfy/core/theme/app_colors.dart';
 import 'package:namma_turfy/core/theme/app_text_styles.dart';
-import 'package:namma_turfy/presentation/widgets/app_network_image.dart';
+import 'package:namma_turfy/presentation/widgets/venue_form_sheet.dart';
+import 'package:namma_turfy/presentation/widgets/zone_form_sheet.dart';
+import 'package:namma_turfy/presentation/widgets/slot_generation_sheet.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -63,7 +61,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
           if (venue == null) {
             return Center(
               child: ElevatedButton.icon(
-                onPressed: () => _showCreateVenueDialog(context, ref, user!.id),
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => VenueFormSheet(ownerId: user!.id),
+                ),
                 icon: const Icon(Icons.add),
                 label: const Text('Create Venue'),
               ),
@@ -103,136 +105,6 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       ),
     );
   }
-
-  void _showCreateVenueDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String ownerId,
-  ) {
-    final nameController = TextEditingController();
-    final locationController = TextEditingController();
-    final descController = TextEditingController();
-    final priceController = TextEditingController();
-    List<XFile> pendingImages = [];
-    bool isSaving = false;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Create New Venue'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Venue Name'),
-                ),
-                TextField(
-                  controller: locationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Location (Area)',
-                  ),
-                ),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 2,
-                ),
-                TextField(
-                  controller: priceController,
-                  decoration: const InputDecoration(labelText: 'Price/hr (₹)'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                _ImagePickerSection(
-                  existingUrls: const [],
-                  pendingImages: pendingImages,
-                  onPickImages: () async {
-                    final picked = await StorageService.pickImages();
-                    if (picked.isNotEmpty) {
-                      setDialogState(
-                        () => pendingImages = [...pendingImages, ...picked],
-                      );
-                    }
-                  },
-                  onRemovePending: (i) => setDialogState(
-                    () => pendingImages = [...pendingImages]..removeAt(i),
-                  ),
-                  onRemoveExisting: null,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      setDialogState(() => isSaving = true);
-                      try {
-                        final venueId =
-                            'venue_${DateTime.now().millisecondsSinceEpoch}';
-                        final uploadedUrls =
-                            await StorageService.uploadVenueImages(
-                              venueId,
-                              pendingImages,
-                            );
-                        final newVenue = Venue(
-                          id: venueId,
-                          ownerId: ownerId,
-                          name: nameController.text,
-                          location: locationController.text,
-                          city: 'Vijayapura',
-                          latitude: 17.3297,
-                          longitude: 75.7181,
-                          type: 'Cricket',
-                          rating: 4.0,
-                          description: descController.text,
-                          pricePerHour:
-                              double.tryParse(priceController.text) ?? 0.0,
-                          sportsTypes: const ['Cricket'],
-                          availableHours: const ['06:00', '22:00'],
-                          images: uploadedUrls,
-                        );
-                        await ref
-                            .read(venueRepositoryProvider)
-                            .saveVenue(newVenue);
-                        ref.invalidate(ownerVenueProvider);
-                        if (context.mounted) Navigator.pop(context);
-                      } catch (e) {
-                        setDialogState(() => isSaving = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Create'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _VenueManager extends ConsumerWidget {
@@ -260,12 +132,23 @@ class _VenueManager extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.edit_note),
                 tooltip: 'Edit Venue',
-                onPressed: () => _showEditVenueDialog(context, ref, venue),
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) =>
+                      VenueFormSheet(venue: venue, ownerId: venue.ownerId),
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.add_box),
                 tooltip: 'Add Zone',
-                onPressed: () => _showAddZoneDialog(context, ref, venue.id),
+                onPressed: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => ZoneFormSheet(venue: venue),
+                ),
               ),
             ],
           ),
@@ -285,7 +168,8 @@ class _VenueManager extends ConsumerWidget {
               }
               return ListView.builder(
                 itemCount: zones.length,
-                itemBuilder: (context, index) => _ZoneItem(zone: zones[index]),
+                itemBuilder: (context, index) =>
+                    _ZoneItem(zone: zones[index], venue: venue),
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -295,229 +179,12 @@ class _VenueManager extends ConsumerWidget {
       ],
     );
   }
-
-  void _showEditVenueDialog(BuildContext context, WidgetRef ref, Venue venue) {
-    final nameController = TextEditingController(text: venue.name);
-    final locationController = TextEditingController(text: venue.location);
-    final descController = TextEditingController(text: venue.description);
-    final priceController = TextEditingController(
-      text: venue.pricePerHour.toString(),
-    );
-    List<String> existingUrls = List.from(venue.images);
-    List<XFile> pendingImages = [];
-    bool isSaving = false;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Edit Venue'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                TextField(
-                  controller: locationController,
-                  decoration: const InputDecoration(labelText: 'Location'),
-                ),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                  maxLines: 2,
-                ),
-                TextField(
-                  controller: priceController,
-                  decoration: const InputDecoration(labelText: 'Price/hr (₹)'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                _ImagePickerSection(
-                  existingUrls: existingUrls,
-                  pendingImages: pendingImages,
-                  onPickImages: () async {
-                    final picked = await StorageService.pickImages();
-                    if (picked.isNotEmpty) {
-                      setDialogState(
-                        () => pendingImages = [...pendingImages, ...picked],
-                      );
-                    }
-                  },
-                  onRemovePending: (i) => setDialogState(
-                    () => pendingImages = [...pendingImages]..removeAt(i),
-                  ),
-                  onRemoveExisting: (i) async {
-                    await StorageService.deleteImage(existingUrls[i]);
-                    setDialogState(
-                      () => existingUrls = [...existingUrls]..removeAt(i),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      setDialogState(() => isSaving = true);
-                      try {
-                        final newUrls = await StorageService.uploadVenueImages(
-                          venue.id,
-                          pendingImages,
-                        );
-                        final updated = venue.copyWith(
-                          name: nameController.text,
-                          location: locationController.text,
-                          description: descController.text,
-                          pricePerHour:
-                              double.tryParse(priceController.text) ??
-                              venue.pricePerHour,
-                          images: [...existingUrls, ...newUrls],
-                        );
-                        await ref
-                            .read(venueRepositoryProvider)
-                            .saveVenue(updated);
-                        ref.invalidate(ownerVenueProvider);
-                        if (context.mounted) Navigator.pop(context);
-                      } catch (e) {
-                        setDialogState(() => isSaving = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Update'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAddZoneDialog(BuildContext context, WidgetRef ref, String venueId) {
-    final nameController = TextEditingController();
-    List<XFile> pendingImages = [];
-    bool isSaving = false;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add Zone'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Zone Name (e.g. Pitch A)',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _ImagePickerSection(
-                  existingUrls: const [],
-                  pendingImages: pendingImages,
-                  onPickImages: () async {
-                    final picked = await StorageService.pickImages();
-                    if (picked.isNotEmpty) {
-                      setDialogState(
-                        () => pendingImages = [...pendingImages, ...picked],
-                      );
-                    }
-                  },
-                  onRemovePending: (i) => setDialogState(
-                    () => pendingImages = [...pendingImages]..removeAt(i),
-                  ),
-                  onRemoveExisting: null,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isSaving ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isSaving
-                  ? null
-                  : () async {
-                      setDialogState(() => isSaving = true);
-                      try {
-                        final zoneId =
-                            'zone_${DateTime.now().millisecondsSinceEpoch}';
-                        final imageUrls = await StorageService.uploadZoneImages(
-                          zoneId,
-                          pendingImages,
-                        );
-                        final newZone = Zone(
-                          id: zoneId,
-                          venueId: venueId,
-                          name: nameController.text,
-                          type: 'Cricket',
-                          images: imageUrls,
-                        );
-                        await ref
-                            .read(venueRepositoryProvider)
-                            .saveZone(newZone);
-                        if (context.mounted) Navigator.pop(context);
-                      } catch (e) {
-                        setDialogState(() => isSaving = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              child: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Add'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _ZoneItem extends ConsumerWidget {
   final Zone zone;
-  const _ZoneItem({required this.zone});
+  final Venue venue;
+  const _ZoneItem({required this.zone, required this.venue});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -532,16 +199,24 @@ class _ZoneItem extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
-            title: Text(
-              zone.name,
-              style: AppTextStyles.titleMedium,
+            title: Text(zone.name, style: AppTextStyles.titleMedium),
+            onTap: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (_) => ZoneFormSheet(venue: venue, zone: zone),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextButton.icon(
-                  onPressed: () =>
-                      _showBulkGenerateDialog(context, ref, zone.id),
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    builder: (_) =>
+                        SlotGenerationSheet(venue: venue, zoneId: zone.id),
+                  ),
                   icon: const Icon(Icons.auto_awesome, size: 16),
                   label: const Text('Bulk', style: TextStyle(fontSize: 12)),
                 ),
@@ -716,208 +391,6 @@ class _ZoneItem extends ConsumerWidget {
       ),
     );
   }
-
-  void _showBulkGenerateDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String zoneId,
-  ) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final initialDate = ref.read(ownerSelectedDateProvider);
-    DateTime startDate = initialDate.isBefore(today) ? today : initialDate;
-    DateTime endDate = startDate;
-    TimeOfDay startTime = const TimeOfDay(hour: 6, minute: 0);
-    TimeOfDay endTime = const TimeOfDay(hour: 22, minute: 0);
-    final priceController = TextEditingController(text: '500');
-    final durationController = TextEditingController(text: '60');
-    bool isGenerating = false;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Bulk Generate Slots'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  title: const Text('Date Range'),
-                  subtitle: Text(
-                    '${DateFormat('dd MMM').format(startDate)} – ${DateFormat('dd MMM').format(endDate)}',
-                  ),
-                  trailing: const Icon(Icons.calendar_today),
-                  onTap: () async {
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      initialDateRange: DateTimeRange(
-                        start: startDate,
-                        end: endDate,
-                      ),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 30)),
-                    );
-                    if (picked != null) {
-                      setDialogState(() {
-                        startDate = picked.start;
-                        endDate = picked.end;
-                      });
-                    }
-                  },
-                ),
-                ListTile(
-                  title: const Text('Start Time'),
-                  subtitle: Text(startTime.format(context)),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: startTime,
-                    );
-                    if (picked != null) {
-                      setDialogState(() => startTime = picked);
-                    }
-                  },
-                ),
-                ListTile(
-                  title: const Text('End Time'),
-                  subtitle: Text(endTime.format(context)),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: () async {
-                    final picked = await showTimePicker(
-                      context: context,
-                      initialTime: endTime,
-                    );
-                    if (picked != null) {
-                      setDialogState(() => endTime = picked);
-                    }
-                  },
-                ),
-                TextField(
-                  controller: durationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Slot Duration (mins)',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                TextField(
-                  controller: priceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Price per Slot (₹)',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: isGenerating ? null : () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: isGenerating
-                  ? null
-                  : () async {
-                      final slots = <Slot>[];
-                      final duration =
-                          int.tryParse(durationController.text) ?? 60;
-                      final price =
-                          double.tryParse(priceController.text) ?? 500.0;
-                      final now = DateTime.now();
-
-                      for (
-                        int i = 0;
-                        i <= endDate.difference(startDate).inDays;
-                        i++
-                      ) {
-                        final currentDate = startDate.add(Duration(days: i));
-                        DateTime current = DateTime(
-                          currentDate.year,
-                          currentDate.month,
-                          currentDate.day,
-                          startTime.hour,
-                          startTime.minute,
-                        );
-                        final dayEnd = DateTime(
-                          currentDate.year,
-                          currentDate.month,
-                          currentDate.day,
-                          endTime.hour,
-                          endTime.minute,
-                        );
-                        while (current.isBefore(dayEnd)) {
-                          final slotEnd = current.add(
-                            Duration(minutes: duration),
-                          );
-
-                          // Only add if start time is in the future
-                          if (current.isAfter(now)) {
-                            slots.add(
-                              Slot(
-                                id: 'slot_${zoneId}_${current.millisecondsSinceEpoch}',
-                                zoneId: zoneId,
-                                startTime: current,
-                                endTime: slotEnd,
-                                price: price,
-                                status: SlotStatus.available,
-                              ),
-                            );
-                          }
-                          current = slotEnd;
-                        }
-                      }
-
-                      if (slots.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'No future slots were generated. Check your time range.',
-                            ),
-                            backgroundColor: AppColors.peakTime,
-                          ),
-                        );
-                        Navigator.pop(context);
-                        return;
-                      }
-
-                      setDialogState(() => isGenerating = true);
-                      try {
-                        await ref
-                            .read(venueRepositoryProvider)
-                            .bulkSaveSlots(slots);
-                        if (context.mounted) Navigator.pop(context);
-                      } catch (e) {
-                        setDialogState(() => isGenerating = false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Failed to generate slots: ${e.toString()}',
-                              ),
-                              backgroundColor: AppColors.error,
-                            ),
-                          );
-                        }
-                      }
-                    },
-              child: isGenerating
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Generate'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _BookingsList extends ConsumerWidget {
@@ -1080,7 +553,10 @@ class _CouponsManager extends ConsumerWidget {
               ref.read(venueRepositoryProvider).deleteCoupon(coupon.id);
               Navigator.pop(context);
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -1453,10 +929,7 @@ class _CouponCardState extends ConsumerState<_CouponCard> {
 class _CouponAnalyticsPanel extends ConsumerWidget {
   final String couponId;
   final String ownerId;
-  const _CouponAnalyticsPanel({
-    required this.couponId,
-    required this.ownerId,
-  });
+  const _CouponAnalyticsPanel({required this.couponId, required this.ownerId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1520,7 +993,10 @@ class _AnalyticsRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar),
+        ),
         Text(
           value,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
@@ -1583,10 +1059,7 @@ class _EarningsDashboard extends ConsumerWidget {
                 color: AppColors.peakTime,
               ),
               const SizedBox(height: 32),
-              Text(
-                'Recent Transactions',
-                style: AppTextStyles.titleMedium,
-              ),
+              Text('Recent Transactions', style: AppTextStyles.titleMedium),
               const SizedBox(height: 8),
               if (bookings.isEmpty)
                 const Text(
@@ -1649,7 +1122,10 @@ class _StatCard extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVar),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.onSurfaceVar,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1718,139 +1194,6 @@ class _OwnerDatePicker extends ConsumerWidget {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-/// Reusable image picker section for dialogs.
-/// Shows existing URL thumbnails + pending XFile thumbnails + add button.
-class _ImagePickerSection extends StatelessWidget {
-  final List<String> existingUrls;
-  final List<XFile> pendingImages;
-  final VoidCallback onPickImages;
-  final void Function(int index)? onRemovePending;
-  final void Function(int index)? onRemoveExisting;
-
-  const _ImagePickerSection({
-    required this.existingUrls,
-    required this.pendingImages,
-    required this.onPickImages,
-    this.onRemovePending,
-    this.onRemoveExisting,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImages = existingUrls.isNotEmpty || pendingImages.isNotEmpty;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Photos',
-              style: TextStyle(color: AppColors.onSurfaceVar, fontSize: 12),
-            ),
-            const Spacer(),
-            TextButton.icon(
-              onPressed: onPickImages,
-              icon: const Icon(Icons.add_photo_alternate, size: 18),
-              label: const Text('Add Photos'),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ],
-        ),
-        if (hasImages)
-          SizedBox(
-            height: 90,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                // Existing URLs
-                for (int i = 0; i < existingUrls.length; i++)
-                  _ImageThumb(
-                    onRemove: onRemoveExisting != null
-                        ? () => onRemoveExisting!(i)
-                        : null,
-                    child: AppNetworkImage(
-                      imageUrl: existingUrls[i],
-                      fit: BoxFit.cover,
-                      errorWidget: const Icon(Icons.broken_image),
-                    ),
-                  ),
-                // Pending (local) images
-                for (int i = 0; i < pendingImages.length; i++)
-                  _ImageThumb(
-                    onRemove: onRemovePending != null
-                        ? () => onRemovePending!(i)
-                        : null,
-                    child: FutureBuilder<Uint8List>(
-                      future: pendingImages[i].readAsBytes(),
-                      builder: (ctx, snap) => snap.hasData
-                          ? Image.memory(snap.data!, fit: BoxFit.cover)
-                          : const Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
-              ],
-            ),
-          )
-        else
-          Container(
-            height: 70,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.outline),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Text(
-                'No photos yet',
-                style: TextStyle(color: AppColors.onSurfaceVar),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _ImageThumb extends StatelessWidget {
-  final Widget child;
-  final VoidCallback? onRemove;
-
-  const _ImageThumb({required this.child, this.onRemove});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(width: 80, height: 80, child: child),
-          ),
-          if (onRemove != null)
-            Positioned(
-              top: 2,
-              right: 2,
-              child: GestureDetector(
-                onTap: onRemove,
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: const Icon(Icons.close, size: 14, color: Colors.white),
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

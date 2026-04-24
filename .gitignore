@@ -59,3 +59,4 @@ functions/npm-debug.log
 android/key.properties
 android/app/*.jks
 android/app/*.keystore
+\n# Claude\n.claude/

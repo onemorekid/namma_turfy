@@ -207,7 +207,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       };
 
       if (kIsWeb) {
-        debugPrint('[Checkout] Web detected, setting _pendingOptions and updating UI');
+        debugPrint(
+          '[Checkout] Web detected, setting _pendingOptions and updating UI',
+        );
         // Web (Desktop & Mobile): store options and show "Open Payment" button.
         // Browsers block the Razorpay modal/redirect if it's not triggered
         // by a direct user gesture (tap).
@@ -233,13 +235,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   /// Step 1b — web only: open the Razorpay modal from a direct user tap.
   void _openWebPayment() {
-    debugPrint('[Checkout] _openWebPayment called, orderReady=${_pendingOptions != null}');
+    debugPrint(
+      '[Checkout] _openWebPayment called, orderReady=${_pendingOptions != null}',
+    );
     if (_pendingOptions == null) {
-      debugPrint('[Checkout] Error: _pendingOptions is null in _openWebPayment');
+      debugPrint(
+        '[Checkout] Error: _pendingOptions is null in _openWebPayment',
+      );
       return;
     }
     try {
-      debugPrint('[Checkout] Invoking _razorpay.open with order ${_pendingOptions?['order_id']}');
+      debugPrint(
+        '[Checkout] Invoking _razorpay.open with order ${_pendingOptions?['order_id']}',
+      );
       _razorpay.open(_pendingOptions!);
     } catch (e) {
       debugPrint('[Checkout] Exception in _razorpay.open: $e');
@@ -367,7 +375,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: const Border.fromBorderSide(
-                    BorderSide(color: AppColors.outline)),
+                  BorderSide(color: AppColors.outline),
+                ),
               ),
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
@@ -375,11 +384,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   _SummaryRow(label: 'Venue', value: widget.venue.name),
                   _SummaryRow(
                     label: 'Date',
-                    value: DateFormat('MMM dd, yyyy')
-                        .format(widget.slots.first.startTime),
+                    value: DateFormat(
+                      'MMM dd, yyyy',
+                    ).format(widget.slots.first.startTime),
                   ),
-                  _SummaryRow(
-                      label: 'Slots', value: '${widget.slots.length}'),
+                  _SummaryRow(label: 'Slots', value: '${widget.slots.length}'),
                   const Divider(height: AppSpacing.md),
                   ...widget.slots.map(
                     (s) => _SummaryRow(
@@ -390,8 +399,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   ),
                   const Divider(height: AppSpacing.md),
                   _SummaryRow(
-                      label: 'Subtotal',
-                      value: '₹${_subtotal.toStringAsFixed(0)}'),
+                    label: 'Subtotal',
+                    value: '₹${_subtotal.toStringAsFixed(0)}',
+                  ),
                   if (_discount > 0)
                     _SummaryRow(
                       label: 'Coupon ($_appliedCouponCode)',
@@ -411,23 +421,30 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: AppSpacing.sm),
             Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.sm,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.offerBg,
                 borderRadius: BorderRadius.circular(10),
                 border: const Border.fromBorderSide(
-                    BorderSide(color: AppColors.offer)),
+                  BorderSide(color: AppColors.offer),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.lock_clock,
-                      color: AppColors.offer, size: 16),
+                  const Icon(
+                    Icons.lock_clock,
+                    color: AppColors.offer,
+                    size: 16,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       'Slots held for 10 minutes. Complete payment soon.',
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.offer),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.offer,
+                      ),
                     ),
                   ),
                 ],
@@ -448,8 +465,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     decoration: InputDecoration(
                       hintText: 'Enter code (e.g. SAVE20)',
                       suffixIcon: _appliedCouponCode != null
-                          ? const Icon(Icons.check_circle,
-                              color: AppColors.primary)
+                          ? const Icon(
+                              Icons.check_circle,
+                              color: AppColors.primary,
+                            )
                           : null,
                     ),
                   ),
@@ -458,12 +477,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed:
-                        _appliedCouponCode != null ? null : _applyPromo,
+                    onPressed: _appliedCouponCode != null ? null : _applyPromo,
                     style: ElevatedButton.styleFrom(
                       minimumSize: Size.zero,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md),
+                        horizontal: AppSpacing.md,
+                      ),
                     ),
                     child: const Text('Apply'),
                   ),
@@ -479,7 +498,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       // ── Bottom CTA ─────────────────────────────────────────────────────────
       bottomNavigationBar: Container(
         padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.ctaBottom),
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.md,
+          AppSpacing.ctaBottom,
+        ),
         decoration: const BoxDecoration(
           color: AppColors.surface,
           boxShadow: [
@@ -498,24 +521,29 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 : (orderReady ? _openWebPayment : _startPayment),
             style: ElevatedButton.styleFrom(
               minimumSize: const Size(double.infinity, 56),
-              backgroundColor:
-                  orderReady ? const Color(0xFF1E88E5) : AppColors.primary,
+              backgroundColor: orderReady
+                  ? const Color(0xFF1E88E5)
+                  : AppColors.primary,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: _isProcessing
                 ? const SizedBox(
                     height: 24,
                     width: 24,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   )
                 : Text(
                     orderReady
                         ? 'Open Payment Gateway'
                         : 'Proceed to Payment  ₹${_total.toStringAsFixed(0)}',
-                    style: AppTextStyles.labelLarge
-                        .copyWith(color: Colors.white),
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
           ),
         ),
@@ -543,21 +571,21 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = isSmall ? AppTextStyles.bodySmall : AppTextStyles.bodyMedium;
+    final baseStyle = isSmall
+        ? AppTextStyles.bodySmall
+        : AppTextStyles.bodyMedium;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: baseStyle.copyWith(color: AppColors.onSurfaceVar),
-          ),
+          Text(label, style: baseStyle.copyWith(color: AppColors.onSurfaceVar)),
           Text(
             value,
             style: isBold
-                ? AppTextStyles.titleMedium
-                    .copyWith(color: color ?? AppColors.onSurface)
+                ? AppTextStyles.titleMedium.copyWith(
+                    color: color ?? AppColors.onSurface,
+                  )
                 : baseStyle.copyWith(
                     color: color ?? AppColors.onSurface,
                     fontWeight: FontWeight.w600,

@@ -7,6 +7,7 @@ import 'package:namma_turfy/domain/entities/coupon_usage.dart';
 abstract class VenueRepository {
   // Venues
   Stream<List<Venue>> watchAllVenues({String? city});
+  Stream<Venue?> watchVenueById(String id);
   Future<List<Venue>> searchVenues({String? sport, String? location});
   Future<Venue?> getVenueById(String id);
   Future<Venue?> getVenueByOwner(String ownerId);
@@ -19,9 +20,15 @@ abstract class VenueRepository {
 
   // Slots
   Stream<List<Slot>> watchSlots(String zoneId, {DateTime? date});
+  Future<List<Slot>> getSlotsInRange(
+    String zoneId,
+    DateTime start,
+    DateTime end,
+  );
   Future<void> saveSlot(Slot slot);
   Future<void> bulkSaveSlots(List<Slot> slots);
   Future<void> deleteSlot(String slotId);
+  Future<void> recalculateAvailableHours(String venueId);
 
   // Coupons
   Stream<List<Coupon>> watchCoupons(String ownerId);

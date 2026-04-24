@@ -24,8 +24,10 @@ class ReceiptScreen extends ConsumerWidget {
         data: (booking) {
           if (booking == null) {
             return const Center(
-              child: Text('Booking not found',
-                  style: TextStyle(color: Colors.white)),
+              child: Text(
+                'Booking not found',
+                style: TextStyle(color: Colors.white),
+              ),
             );
           }
           final venueAsync = ref.watch(venueProvider(booking.venueId));
@@ -38,8 +40,11 @@ class ReceiptScreen extends ConsumerWidget {
                   bottom: false,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md, AppSpacing.xl, AppSpacing.md,
-                        AppSpacing.lg),
+                      AppSpacing.md,
+                      AppSpacing.xl,
+                      AppSpacing.md,
+                      AppSpacing.lg,
+                    ),
                     child: Column(
                       children: [
                         // Checkmark circle
@@ -59,15 +64,17 @@ class ReceiptScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.md),
                         Text(
                           'Booking Confirmed!',
-                          style: AppTextStyles.headlineMedium
-                              .copyWith(color: Colors.white),
+                          style: AppTextStyles.headlineMedium.copyWith(
+                            color: Colors.white,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           booking.venueName ?? '',
-                          style: AppTextStyles.titleMedium
-                              .copyWith(color: Colors.white70),
+                          style: AppTextStyles.titleMedium.copyWith(
+                            color: Colors.white70,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         if (booking.venueLocation != null) ...[
@@ -75,13 +82,17 @@ class ReceiptScreen extends ConsumerWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.location_on,
-                                  size: 14, color: Colors.white60),
+                              const Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.white60,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 booking.venueLocation!,
-                                style: AppTextStyles.bodySmall
-                                    .copyWith(color: Colors.white60),
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: Colors.white60,
+                                ),
                               ),
                             ],
                           ),
@@ -89,8 +100,9 @@ class ReceiptScreen extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.sm),
                         Text(
                           'Show this QR code at the venue',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: Colors.white60),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: Colors.white60,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
 
@@ -125,7 +137,9 @@ class ReceiptScreen extends ConsumerWidget {
                 Container(
                   decoration: const BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
                   ),
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Column(
@@ -149,8 +163,9 @@ class ReceiptScreen extends ConsumerWidget {
                             ),
                             _ReceiptRow(
                               label: 'Date',
-                              value: DateFormat('EEE, MMM dd, yyyy')
-                                  .format(booking.startTime),
+                              value: DateFormat(
+                                'EEE, MMM dd, yyyy',
+                              ).format(booking.startTime),
                             ),
                             _ReceiptRow(
                               label: 'Time',
@@ -160,10 +175,14 @@ class ReceiptScreen extends ConsumerWidget {
                             ),
                             if (booking.sportType != null)
                               _ReceiptRow(
-                                  label: 'Sport', value: booking.sportType!),
+                                label: 'Sport',
+                                value: booking.sportType!,
+                              ),
                             if (booking.zoneName != null)
                               _ReceiptRow(
-                                  label: 'Zone', value: booking.zoneName!),
+                                label: 'Zone',
+                                value: booking.zoneName!,
+                              ),
                             _ReceiptRow(
                               label: 'Slots Booked',
                               value: '${booking.slotIds.length}',
@@ -195,9 +214,12 @@ class ReceiptScreen extends ConsumerWidget {
                             ? const SizedBox.shrink()
                             : _VenueInfoSection(venue: venue),
                         loading: () => const Padding(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.md,
+                          ),
                           child: CircularProgressIndicator(
-                              color: AppColors.primary),
+                            color: AppColors.primary,
+                          ),
                         ),
                         error: (_, __) => const SizedBox.shrink(),
                       ),
@@ -214,9 +236,12 @@ class ReceiptScreen extends ConsumerWidget {
                                 minimumSize: const Size(0, 48),
                                 backgroundColor: AppColors.primary,
                               ),
-                              child: Text('Home',
-                                  style: AppTextStyles.labelMedium
-                                      .copyWith(color: Colors.white)),
+                              child: Text(
+                                'Home',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
@@ -225,12 +250,17 @@ class ReceiptScreen extends ConsumerWidget {
                               onPressed: () => context.push('/my-bookings'),
                               style: OutlinedButton.styleFrom(
                                 minimumSize: const Size(0, 48),
-                                side: const BorderSide(color: AppColors.primary),
+                                side: const BorderSide(
+                                  color: AppColors.primary,
+                                ),
                                 foregroundColor: AppColors.primary,
                               ),
-                              child: Text('My Bookings',
-                                  style: AppTextStyles.labelMedium
-                                      .copyWith(color: AppColors.primary)),
+                              child: Text(
+                                'My Bookings',
+                                style: AppTextStyles.labelMedium.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -244,10 +274,11 @@ class ReceiptScreen extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Center(
-            child: CircularProgressIndicator(color: Colors.white)),
-        error: (e, _) =>
-            Center(child: Text('Error: $e', style: const TextStyle(color: Colors.white))),
+        loading: () =>
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
+        error: (e, _) => Center(
+          child: Text('Error: $e', style: const TextStyle(color: Colors.white)),
+        ),
       ),
     );
   }
@@ -261,7 +292,8 @@ class _VenueInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasAny = venue.generalInstructions != null ||
+    final hasAny =
+        venue.generalInstructions != null ||
         venue.cancellationPolicy != null ||
         venue.rules.isNotEmpty;
     if (!hasAny) return const SizedBox.shrink();
@@ -294,7 +326,11 @@ class _InfoCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String body;
-  const _InfoCard({required this.icon, required this.title, required this.body});
+  const _InfoCard({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -347,21 +383,28 @@ class _RulesCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          ...rules.map((rule) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('• ',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.onSurfaceVar)),
-                    Expanded(
-                        child: Text(rule,
-                            style: AppTextStyles.bodySmall
-                                .copyWith(fontSize: 13))),
-                  ],
-                ),
-              )),
+          ...rules.map(
+            (rule) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '• ',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVar,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      rule,
+                      style: AppTextStyles.bodySmall.copyWith(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -390,17 +433,22 @@ class _ReceiptRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.onSurfaceVar)),
+          Text(
+            label,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.onSurfaceVar,
+            ),
+          ),
           Text(
             value,
             style: isBold
-                ? AppTextStyles.titleMedium
-                    .copyWith(color: valueColor ?? AppColors.onSurface)
-                : AppTextStyles.bodyMedium
-                    .copyWith(color: valueColor ?? AppColors.onSurface,
-                        fontWeight: FontWeight.w600),
+                ? AppTextStyles.titleMedium.copyWith(
+                    color: valueColor ?? AppColors.onSurface,
+                  )
+                : AppTextStyles.bodyMedium.copyWith(
+                    color: valueColor ?? AppColors.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
           ),
         ],
       ),

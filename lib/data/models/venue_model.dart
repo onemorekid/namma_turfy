@@ -29,6 +29,21 @@ class VenueModel extends Venue {
     super.ownerBankName,
     super.razorpayContactId,
     super.razorpayFundAccountId,
+    super.openTimeHour,
+    super.openTimeMinute,
+    super.closeTimeHour,
+    super.closeTimeMinute,
+    super.morningPeakStartHour,
+    super.morningPeakStartMinute,
+    super.morningPeakEndHour,
+    super.morningPeakEndMinute,
+    super.eveningPeakStartHour,
+    super.eveningPeakStartMinute,
+    super.eveningPeakEndHour,
+    super.eveningPeakEndMinute,
+    super.peakMultiplier,
+    super.minSlotPrice,
+    super.availableSlotHours,
   });
 
   factory VenueModel.fromJson(Map<String, dynamic> json) {
@@ -78,6 +93,28 @@ class VenueModel extends Venue {
       ownerBankName: json['ownerBankName'] as String?,
       razorpayContactId: json['razorpayContactId'] as String?,
       razorpayFundAccountId: json['razorpayFundAccountId'] as String?,
+      openTimeHour: (json['openTimeHour'] as num?)?.toInt(),
+      openTimeMinute: (json['openTimeMinute'] as num?)?.toInt(),
+      closeTimeHour: (json['closeTimeHour'] as num?)?.toInt(),
+      closeTimeMinute: (json['closeTimeMinute'] as num?)?.toInt(),
+      morningPeakStartHour:
+          (json['morningPeakStartHour'] as num?)?.toInt() ?? 6,
+      morningPeakStartMinute:
+          (json['morningPeakStartMinute'] as num?)?.toInt() ?? 0,
+      morningPeakEndHour: (json['morningPeakEndHour'] as num?)?.toInt() ?? 10,
+      morningPeakEndMinute:
+          (json['morningPeakEndMinute'] as num?)?.toInt() ?? 0,
+      eveningPeakStartHour:
+          (json['eveningPeakStartHour'] as num?)?.toInt() ?? 17,
+      eveningPeakStartMinute:
+          (json['eveningPeakStartMinute'] as num?)?.toInt() ?? 0,
+      eveningPeakEndHour: (json['eveningPeakEndHour'] as num?)?.toInt() ?? 22,
+      eveningPeakEndMinute:
+          (json['eveningPeakEndMinute'] as num?)?.toInt() ?? 0,
+      peakMultiplier: (json['peakMultiplier'] as num?)?.toDouble() ?? 1.2,
+      minSlotPrice: (json['minSlotPrice'] as num?)?.toDouble(),
+      availableSlotHours:
+          (json['availableSlotHours'] as List?)?.cast<int>() ?? [],
     );
   }
 
@@ -115,5 +152,20 @@ class VenueModel extends Venue {
     if (razorpayContactId != null) 'razorpayContactId': razorpayContactId,
     if (razorpayFundAccountId != null)
       'razorpayFundAccountId': razorpayFundAccountId,
+    if (openTimeHour != null) 'openTimeHour': openTimeHour,
+    if (openTimeMinute != null) 'openTimeMinute': openTimeMinute,
+    if (closeTimeHour != null) 'closeTimeHour': closeTimeHour,
+    if (closeTimeMinute != null) 'closeTimeMinute': closeTimeMinute,
+    'morningPeakStartHour': morningPeakStartHour,
+    'morningPeakStartMinute': morningPeakStartMinute,
+    'morningPeakEndHour': morningPeakEndHour,
+    'morningPeakEndMinute': morningPeakEndMinute,
+    'eveningPeakStartHour': eveningPeakStartHour,
+    'eveningPeakStartMinute': eveningPeakStartMinute,
+    'eveningPeakEndHour': eveningPeakEndHour,
+    'eveningPeakEndMinute': eveningPeakEndMinute,
+    'peakMultiplier': peakMultiplier,
+    if (minSlotPrice != null) 'minSlotPrice': minSlotPrice,
+    'availableSlotHours': availableSlotHours,
   };
 }

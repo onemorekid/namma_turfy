@@ -75,7 +75,9 @@ class BookingModel extends Booking {
   }
 
   factory BookingModel.fromSnapshot(DocumentSnapshot snap) {
-    final data = Map<String, dynamic>.from(snap.data() as Map<String, dynamic>? ?? {});
+    final data = Map<String, dynamic>.from(
+      snap.data() as Map<String, dynamic>? ?? {},
+    );
     data['id'] = snap.id;
     if (data['date'] is Timestamp) {
       data['date'] = (data['date'] as Timestamp).toDate().toIso8601String();

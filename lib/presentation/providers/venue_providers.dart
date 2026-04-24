@@ -22,8 +22,8 @@ final allVenuesProvider = StreamProvider<List<Venue>>((ref) {
 
 final venuesProvider = allVenuesProvider;
 
-final venueProvider = FutureProvider.family<Venue?, String>((ref, id) {
-  return ref.watch(venueRepositoryProvider).getVenueById(id);
+final venueProvider = StreamProvider.family<Venue?, String>((ref, id) {
+  return ref.watch(venueRepositoryProvider).watchVenueById(id);
 });
 
 final venueZonesProvider = StreamProvider.family<List<Zone>, String>((
@@ -76,16 +76,35 @@ final ownerCouponsProvider = StreamProvider<List<Coupon>>((ref) {
   return ref.watch(venueRepositoryProvider).watchCoupons(user.id);
 });
 
+final venueOffersProvider = StreamProvider.family<List<Coupon>, String>((
+  ref,
+  ownerId,
+) {
+  return ref.watch(venueRepositoryProvider).watchCoupons(ownerId).map((
+    coupons,
+  ) {
+    final now = DateTime.now();
+    return coupons.where((c) {
+      final isGeneric =
+          c.restrictedEmails == null || c.restrictedEmails!.isEmpty;
+      final isActive = c.validTo.isAfter(now);
+      final hasUsageLeft = c.usageCount < c.usageLimit;
+      return isGeneric && isActive && hasUsageLeft;
+    }).toList();
+  });
+});
+
 /// Streams coupon usage records for a specific coupon owned by a given owner.
 /// Both couponId and ownerId are required for Firestore rule compliance.
-final couponUsagesProvider = StreamProvider.family<
-  List<CouponUsage>,
-  ({String couponId, String ownerId})
->((ref, params) {
-  return ref
-      .watch(venueRepositoryProvider)
-      .watchCouponUsages(params.couponId, params.ownerId);
-});
+final couponUsagesProvider =
+    StreamProvider.family<
+      List<CouponUsage>,
+      ({String couponId, String ownerId})
+    >((ref, params) {
+      return ref
+          .watch(venueRepositoryProvider)
+          .watchCouponUsages(params.couponId, params.ownerId);
+    });
 
 final venueSearchControllerProvider =
     AsyncNotifierProvider<VenueSearchController, List<Venue>>(

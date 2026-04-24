@@ -25,16 +25,56 @@ class AppTheme {
 
       // ── Typography ────────────────────────────────────────────────────────
       textTheme: GoogleFonts.outfitTextTheme(base.textTheme).copyWith(
-        displayLarge:  GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w700, color: AppColors.onSurface),
-        headlineMedium: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.onSurface),
-        titleLarge:    GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.onSurface),
-        titleMedium:   GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.onSurface),
-        bodyLarge:     GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w400, color: AppColors.onSurface),
-        bodyMedium:    GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.onSurface),
-        bodySmall:     GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.onSurfaceVar),
-        labelLarge:    GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.onSurface),
-        labelMedium:   GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.onSurface),
-        labelSmall:    GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.onSurfaceVar),
+        displayLarge: GoogleFonts.outfit(
+          fontSize: 32,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurface,
+        ),
+        headlineMedium: GoogleFonts.outfit(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurface,
+        ),
+        titleLarge: GoogleFonts.outfit(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: AppColors.onSurface,
+        ),
+        titleMedium: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.onSurface,
+        ),
+        bodyLarge: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: AppColors.onSurface,
+        ),
+        bodyMedium: GoogleFonts.outfit(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          color: AppColors.onSurface,
+        ),
+        bodySmall: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: AppColors.onSurfaceVar,
+        ),
+        labelLarge: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: AppColors.onSurface,
+        ),
+        labelMedium: GoogleFonts.outfit(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.onSurface,
+        ),
+        labelSmall: GoogleFonts.outfit(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: AppColors.onSurfaceVar,
+        ),
       ),
 
       // ── App bar ───────────────────────────────────────────────────────────
@@ -72,9 +112,14 @@ class AppTheme {
           // explicitly, or wrap in SizedBox(width: double.infinity, height: 56).
           minimumSize: const Size(64, 40),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 0,
-          textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
 
@@ -85,8 +130,13 @@ class AppTheme {
           minimumSize: const Size(double.infinity, 56),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           side: const BorderSide(color: AppColors.outline, width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
 
@@ -94,7 +144,10 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
-          textStyle: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: GoogleFonts.outfit(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
 
@@ -102,8 +155,14 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceVariant,
-        hintStyle: GoogleFonts.outfit(fontSize: 14, color: AppColors.outlineVariant),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: GoogleFonts.outfit(
+          fontSize: 14,
+          color: AppColors.outlineVariant,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.outlineVariant),
@@ -126,7 +185,10 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariant,
         selectedColor: AppColors.primary,
-        labelStyle: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600),
+        labelStyle: GoogleFonts.outfit(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         side: const BorderSide(color: AppColors.outline),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -138,8 +200,14 @@ class AppTheme {
         elevation: 0,
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.outlineVariant,
-        selectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle: GoogleFonts.outfit(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: GoogleFonts.outfit(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
         type: BottomNavigationBarType.fixed,
         showSelectedLabels: true,
         showUnselectedLabels: true,

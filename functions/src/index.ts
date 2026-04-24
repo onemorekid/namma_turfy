@@ -6,6 +6,14 @@ import { razorpayWebhook } from "./razorpayWebhook";
 // settleOwnerPayouts intentionally disabled — owner payouts are distributed manually.
 // The ownerPayout + platformCommission fields remain in Firestore booking documents for tracking.
 
+import { onSlotStatusChange } from "./onSlotStatusChange";
+
 admin.initializeApp();
 
-export { createOrder, verifyAndBook, releaseExpiredLocks, razorpayWebhook };
+export {
+  createOrder,
+  verifyAndBook,
+  releaseExpiredLocks,
+  razorpayWebhook,
+  onSlotStatusChange,
+};

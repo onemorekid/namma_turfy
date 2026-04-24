@@ -37,7 +37,8 @@ class SlotRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = _state;
-    final isInteractive = state == SlotRowState.available ||
+    final isInteractive =
+        state == SlotRowState.available ||
         state == SlotRowState.peak ||
         state == SlotRowState.selected;
 
@@ -67,7 +68,7 @@ class SlotRowWidget extends StatelessWidget {
                   Text(
                     slot.endTime != null
                         ? '${DateFormat('hh:mm a').format(slot.startTime)} – '
-                          '${DateFormat('hh:mm a').format(slot.endTime!)}'
+                              '${DateFormat('hh:mm a').format(slot.endTime!)}'
                         : DateFormat('hh:mm a').format(slot.startTime),
                     style: AppTextStyles.bodyLarge.copyWith(
                       color: state == SlotRowState.booked
@@ -130,9 +131,9 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, bg) = switch (state) {
       SlotRowState.available => ('Available', AppColors.primary),
-      SlotRowState.peak      => ('Peak Time', AppColors.peakTime),
-      SlotRowState.booked    => ('Booked',    AppColors.outlineVariant),
-      SlotRowState.selected  => ('Selected',  AppColors.primary),
+      SlotRowState.peak => ('Peak Time', AppColors.peakTime),
+      SlotRowState.booked => ('Booked', AppColors.outlineVariant),
+      SlotRowState.selected => ('Selected', AppColors.primary),
     };
 
     return Container(
@@ -159,9 +160,9 @@ class _StateIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, color) = switch (state) {
       SlotRowState.available => (Icons.check_circle, AppColors.primary),
-      SlotRowState.peak      => (Icons.cancel,       AppColors.error),
-      SlotRowState.booked    => (Icons.cancel,        AppColors.outlineVariant),
-      SlotRowState.selected  => (Icons.check_circle,  AppColors.primary),
+      SlotRowState.peak => (Icons.cancel, AppColors.error),
+      SlotRowState.booked => (Icons.cancel, AppColors.outlineVariant),
+      SlotRowState.selected => (Icons.check_circle, AppColors.primary),
     };
     return Icon(icon, size: 20, color: color);
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:namma_turfy/domain/entities/user.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
+import 'package:namma_turfy/presentation/providers/app_providers.dart';
 
 class AppDrawer extends ConsumerWidget {
   const AppDrawer({super.key});
@@ -45,6 +46,21 @@ class AppDrawer extends ConsumerWidget {
                   user?.email ?? '',
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
+                const SizedBox(height: 4),
+                // F-01: App version display
+                ref
+                    .watch(packageInfoProvider)
+                    .when(
+                      data: (info) => Text(
+                        'v${info.version} (${info.buildNumber})',
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 11,
+                        ),
+                      ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
               ],
             ),
           ),

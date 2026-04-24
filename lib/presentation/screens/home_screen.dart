@@ -11,21 +11,31 @@ import 'package:intl/intl.dart';
 import 'package:namma_turfy/domain/entities/booking.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
-import 'package:namma_turfy/presentation/providers/discovery_providers.dart';
 import 'package:namma_turfy/presentation/providers/venue_providers.dart';
+import 'package:namma_turfy/presentation/providers/discovery_providers.dart';
+import 'package:namma_turfy/presentation/providers/app_providers.dart';
 import 'package:namma_turfy/presentation/widgets/offer_banner_widget.dart';
+
 import 'package:namma_turfy/presentation/widgets/venue_card_widget.dart';
 
 // ── Bottom nav index state ─────────────────────────────────────────────────────
-final _navIndexProvider = NotifierProvider<_NavIndexNotifier, int>(_NavIndexNotifier.new);
+final _navIndexProvider = NotifierProvider<_NavIndexNotifier, int>(
+  _NavIndexNotifier.new,
+);
+
 class _NavIndexNotifier extends Notifier<int> {
-  @override int build() => 0;
+  @override
+  int build() => 0;
   void set(int v) => state = v;
 }
 
-final _offerVisibleProvider = NotifierProvider<_OfferVisibleNotifier, bool>(_OfferVisibleNotifier.new);
+final _offerVisibleProvider = NotifierProvider<_OfferVisibleNotifier, bool>(
+  _OfferVisibleNotifier.new,
+);
+
 class _OfferVisibleNotifier extends Notifier<bool> {
-  @override bool build() => true;
+  @override
+  bool build() => true;
   void hide() => state = false;
 }
 
@@ -81,10 +91,34 @@ class _AppBottomNav extends StatelessWidget {
           height: 60,
           child: Row(
             children: [
-              _NavItem(icon: Icons.home_outlined,          label: 'Home',        index: 0, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.calendar_today_outlined, label: 'Bookings',   index: 1, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.emoji_events_outlined,   label: 'Tournaments', index: 2, current: currentIndex, onTap: onTap),
-              _NavItem(icon: Icons.person_outline,          label: 'Profile',     index: 3, current: currentIndex, onTap: onTap),
+              _NavItem(
+                icon: Icons.home_outlined,
+                label: 'Home',
+                index: 0,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.calendar_today_outlined,
+                label: 'Bookings',
+                index: 1,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.emoji_events_outlined,
+                label: 'Tournaments',
+                index: 2,
+                current: currentIndex,
+                onTap: onTap,
+              ),
+              _NavItem(
+                icon: Icons.person_outline,
+                label: 'Profile',
+                index: 3,
+                current: currentIndex,
+                onTap: onTap,
+              ),
             ],
           ),
         ),
@@ -99,7 +133,13 @@ class _NavItem extends StatelessWidget {
   final int index;
   final int current;
   final ValueChanged<int> onTap;
-  const _NavItem({required this.icon, required this.label, required this.index, required this.current, required this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.index,
+    required this.current,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +151,11 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 28, color: isActive ? AppColors.primary : AppColors.outlineVariant),
+            Icon(
+              icon,
+              size: 28,
+              color: isActive ? AppColors.primary : AppColors.outlineVariant,
+            ),
             const SizedBox(height: 2),
             Text(
               label,
@@ -134,11 +178,10 @@ class _HomeTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final venuesAsync = ref.watch(allVenuesProvider);
+    final filteredVenuesAsync = ref.watch(filteredVenuesProvider);
     final userPos = ref.watch(userPositionProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final selectedHour = ref.watch(selectedHourProvider);
-    final searchQuery = ref.watch(searchQueryProvider);
     final user = ref.watch(currentUserProvider);
     final offerVisible = ref.watch(_offerVisibleProvider);
 
@@ -151,14 +194,16 @@ class _HomeTab extends ConsumerWidget {
           // Offer banner
           if (offerVisible)
             OfferBannerWidget(
-              onDismiss: () =>
-                  ref.read(_offerVisibleProvider.notifier).hide(),
+              onDismiss: () => ref.read(_offerVisibleProvider.notifier).hide(),
             ),
 
           // Search bar
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0,
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
             ),
             child: TextField(
               decoration: const InputDecoration(
@@ -175,48 +220,25 @@ class _HomeTab extends ConsumerWidget {
 
           // Venue list
           Expanded(
-            child: venuesAsync.when(
-              data: (venues) {
-                final allSports = {'All', ...venues.expand((v) => v.sportsTypes)};
-                final categories = [
-                  'All',
-                  ...allSports.where((s) => s != 'All').toList()..sort(),
-                ];
-
-                var filtered = venues.where((v) => !v.isSuspended).toList();
-                if (selectedCategory != 'All') {
-                  filtered = filtered
-                      .where((v) => v.sportsTypes.contains(selectedCategory))
-                      .toList();
-                }
-                if (searchQuery.isNotEmpty) {
-                  filtered = filtered
-                      .where(
-                        (v) =>
-                            v.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-                            v.location.toLowerCase().contains(searchQuery.toLowerCase()),
-                      )
-                      .toList();
-                }
-                if (selectedHour != null) {
-                  filtered = filtered.where((v) {
-                    if (v.availableHours.isEmpty) return true;
-                    final hours = v.availableHours
-                        .map((h) => int.tryParse(h.split(':').first))
-                        .whereType<int>()
-                        .toSet();
-                    return hours.contains(selectedHour);
-                  }).toList();
-                }
-                if (userPos != null) {
-                  filtered.sort((a, b) {
-                    final dA = ProximityHelper.calculateDistance(
-                        userPos.latitude, userPos.longitude, a.latitude, a.longitude);
-                    final dB = ProximityHelper.calculateDistance(
-                        userPos.latitude, userPos.longitude, b.latitude, b.longitude);
-                    return dA.compareTo(dB);
-                  });
-                }
+            child: filteredVenuesAsync.when(
+              data: (filtered) {
+                // To keep the CategoryFilter dynamic based on ALL available venues,
+                // we still need to derive categories from the base list or a separate provider.
+                // For simplicity here, we'll derive from the filtered list (though base list is better).
+                final venuesAsync = ref.watch(allVenuesProvider);
+                final categories = venuesAsync.maybeWhen(
+                  data: (all) {
+                    final allSports = {
+                      'All',
+                      ...all.expand((v) => v.sportsTypes),
+                    };
+                    return [
+                      'All',
+                      ...allSports.where((s) => s != 'All').toList()..sort(),
+                    ];
+                  },
+                  orElse: () => ['All'],
+                );
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,9 +251,15 @@ class _HomeTab extends ConsumerWidget {
                     // Section header
                     Padding(
                       padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                        AppSpacing.sm,
                       ),
-                      child: Text('Popular Turfs', style: AppTextStyles.titleMedium),
+                      child: Text(
+                        'Popular Turfs',
+                        style: AppTextStyles.titleMedium,
+                      ),
                     ),
 
                     Expanded(
@@ -240,13 +268,17 @@ class _HomeTab extends ConsumerWidget {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.location_off,
-                                      size: 48, color: AppColors.outlineVariant),
+                                  const Icon(
+                                    Icons.location_off,
+                                    size: 48,
+                                    color: AppColors.outlineVariant,
+                                  ),
                                   const SizedBox(height: AppSpacing.sm),
                                   Text(
                                     'No venues found',
-                                    style: AppTextStyles.bodyMedium
-                                        .copyWith(color: AppColors.onSurfaceVar),
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: AppColors.onSurfaceVar,
+                                    ),
                                   ),
                                   if (user?.preferredCity != null) ...[
                                     const SizedBox(height: AppSpacing.md),
@@ -274,8 +306,10 @@ class _HomeTab extends ConsumerWidget {
                                 double? distance;
                                 if (userPos != null) {
                                   distance = ProximityHelper.calculateDistance(
-                                    userPos.latitude, userPos.longitude,
-                                    venue.latitude, venue.longitude,
+                                    userPos.latitude,
+                                    userPos.longitude,
+                                    venue.latitude,
+                                    venue.longitude,
                                   );
                                 }
                                 return VenueCardWidget(
@@ -288,8 +322,9 @@ class _HomeTab extends ConsumerWidget {
                   ],
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
               error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
@@ -320,8 +355,10 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Namma Turfy',
-              style: AppTextStyles.titleLarge.copyWith(color: AppColors.primary)),
+          Text(
+            'Namma Turfy',
+            style: AppTextStyles.titleLarge.copyWith(color: AppColors.primary),
+          ),
           _LocationPicker(user: user, ref: ref),
         ],
       ),
@@ -330,8 +367,9 @@ class _HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
           tooltip: 'Use my location',
           icon: const Icon(Icons.my_location, color: AppColors.onSurface),
           onPressed: () async {
-            final pos =
-                await ref.read(locationServiceProvider).getCurrentPosition();
+            final pos = await ref
+                .read(locationServiceProvider)
+                .getCurrentPosition();
             ref.read(userPositionProvider.notifier).value = pos;
           },
         ),
@@ -361,34 +399,49 @@ class _LocationPicker extends StatelessWidget {
             children: [
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
-                child: Text('Select Your City',
-                    style: AppTextStyles.titleMedium),
+                child: Text(
+                  'Select Your City',
+                  style: AppTextStyles.titleMedium,
+                ),
               ),
               const Divider(height: 1),
-              ...cities.map((city) => ListTile(
-                    leading: const Icon(Icons.location_on,
-                        color: AppColors.primary),
-                    title: Text(city, style: AppTextStyles.bodyLarge),
-                    trailing: selectedCity == city
-                        ? const Icon(Icons.check, color: AppColors.primary)
-                        : null,
-                    onTap: () {
-                      ref.read(authRepositoryProvider).updateProfile(
-                            name: user?.name ?? 'User',
-                            preferredCity: city,
-                          );
-                      Navigator.pop(context);
-                    },
-                  )),
+              ...cities.map(
+                (city) => ListTile(
+                  leading: const Icon(
+                    Icons.location_on,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(city, style: AppTextStyles.bodyLarge),
+                  trailing: selectedCity == city
+                      ? const Icon(Icons.check, color: AppColors.primary)
+                      : null,
+                  onTap: () {
+                    ref
+                        .read(authRepositoryProvider)
+                        .updateProfile(
+                          name: user?.name ?? 'User',
+                          preferredCity: city,
+                        );
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.location_off,
-                    color: AppColors.onSurfaceVar),
-                title: Text('Show All Cities',
-                    style: AppTextStyles.bodyLarge
-                        .copyWith(color: AppColors.onSurfaceVar)),
+                leading: const Icon(
+                  Icons.location_off,
+                  color: AppColors.onSurfaceVar,
+                ),
+                title: Text(
+                  'Show All Cities',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.onSurfaceVar,
+                  ),
+                ),
                 onTap: () {
-                  ref.read(authRepositoryProvider).updateProfile(
+                  ref
+                      .read(authRepositoryProvider)
+                      .updateProfile(
                         name: user?.name ?? 'User',
                         preferredCity: '',
                       );
@@ -406,11 +459,15 @@ class _LocationPicker extends StatelessWidget {
           const SizedBox(width: 2),
           Text(
             selectedCity?.isNotEmpty == true ? selectedCity! : 'Select City',
-            style: AppTextStyles.bodySmall
-                .copyWith(color: AppColors.onSurfaceVar),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.onSurfaceVar,
+            ),
           ),
-          const Icon(Icons.arrow_drop_down,
-              size: 14, color: AppColors.onSurfaceVar),
+          const Icon(
+            Icons.arrow_drop_down,
+            size: 14,
+            color: AppColors.onSurfaceVar,
+          ),
         ],
       ),
     );
@@ -425,19 +482,34 @@ class _TimeDiscovery extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    int startHour = now.hour;
+    if (now.minute >= 45) {
+      startHour++;
+    }
+
+    final List<int> hours = List.generate(
+      4,
+      (index) => (startHour + index) % 24,
+    );
+
     return SizedBox(
       height: 52,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-        itemCount: 16,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        itemCount: hours.length,
         itemBuilder: (context, index) {
-          final hour = index + 6;
+          final hour = hours[index];
           final isSelected = selectedHour == hour;
-          final timeStr = hour > 12
-              ? '${hour - 12}pm'
-              : '$hour${hour == 12 ? 'pm' : 'am'}';
+
+          final displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
+          final amPm = hour >= 12 ? 'PM' : 'AM';
+          final timeStr = '$displayHour $amPm';
+
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
@@ -448,8 +520,9 @@ class _TimeDiscovery extends ConsumerWidget {
                 color: isSelected ? Colors.white : AppColors.onSurface,
               ),
               onSelected: (val) =>
-                  ref.read(selectedHourProvider.notifier).value =
-                      val ? hour : null,
+                  ref.read(selectedHourProvider.notifier).value = val
+                  ? hour
+                  : null,
             ),
           );
         },
@@ -463,7 +536,10 @@ class _TimeDiscovery extends ConsumerWidget {
 class _CategoryFilter extends ConsumerWidget {
   final List<String> categories;
   final String selectedCategory;
-  const _CategoryFilter({required this.categories, required this.selectedCategory});
+  const _CategoryFilter({
+    required this.categories,
+    required this.selectedCategory,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -472,7 +548,9 @@ class _CategoryFilter extends ConsumerWidget {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: 6),
+          horizontal: AppSpacing.md,
+          vertical: 6,
+        ),
         itemCount: categories.length,
         itemBuilder: (context, index) {
           final cat = categories[index];
@@ -519,16 +597,25 @@ class _BookingsTab extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.sports_soccer,
-                          size: 64, color: AppColors.outlineVariant),
+                      const Icon(
+                        Icons.sports_soccer,
+                        size: 64,
+                        color: AppColors.outlineVariant,
+                      ),
                       const SizedBox(height: 16),
-                      Text('No bookings yet',
-                          style: AppTextStyles.titleMedium
-                              .copyWith(color: AppColors.onSurfaceVar)),
+                      Text(
+                        'No bookings yet',
+                        style: AppTextStyles.titleMedium.copyWith(
+                          color: AppColors.onSurfaceVar,
+                        ),
+                      ),
                       const SizedBox(height: 8),
-                      Text('Book a venue to get started!',
-                          style: AppTextStyles.bodyMedium
-                              .copyWith(color: AppColors.onSurfaceVar)),
+                      Text(
+                        'Book a venue to get started!',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.onSurfaceVar,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -540,18 +627,17 @@ class _BookingsTab extends ConsumerWidget {
                 itemCount: bookings.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (_, i) =>
-                    _BookingCard(booking: bookings[i]),
+                itemBuilder: (_, i) => _BookingCard(booking: bookings[i]),
               ),
             );
           },
           loading: () => const SliverFillRemaining(
             child: Center(
-                child: CircularProgressIndicator(color: AppColors.primary)),
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
           ),
-          error: (e, _) => SliverFillRemaining(
-            child: Center(child: Text('Error: $e')),
-          ),
+          error: (e, _) =>
+              SliverFillRemaining(child: Center(child: Text('Error: $e'))),
         ),
       ],
     );
@@ -566,11 +652,11 @@ class _BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = booking.displayStatus;
     final Color statusColor = switch (status) {
-      'Upcoming'  => const Color(0xFF1E88E5),
-      'Ongoing'   => AppColors.primary,
+      'Upcoming' => const Color(0xFF1E88E5),
+      'Ongoing' => AppColors.primary,
       'Completed' => AppColors.outlineVariant,
       'Cancelled' => AppColors.error,
-      _           => AppColors.peakTime,
+      _ => AppColors.peakTime,
     };
     final shortId = booking.id.length > 6
         ? booking.id.substring(booking.id.length - 6)
@@ -591,13 +677,17 @@ class _BookingCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(booking.venueName ?? 'Venue',
-                        style: AppTextStyles.titleMedium),
+                    child: Text(
+                      booking.venueName ?? 'Venue',
+                      style: AppTextStyles.titleMedium,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -605,88 +695,122 @@ class _BookingCard extends StatelessWidget {
                     child: Text(
                       status.toUpperCase(),
                       style: TextStyle(
-                          color: statusColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold),
+                        color: statusColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               if (booking.venueLocation != null) ...[
                 const SizedBox(height: 4),
-                Row(children: [
-                  const Icon(Icons.location_on,
-                      size: 14, color: AppColors.onSurfaceVar),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(booking.venueLocation!,
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: AppColors.onSurfaceVar,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        booking.venueLocation!,
                         style: AppTextStyles.bodySmall,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                  ),
-                ]),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ],
               const SizedBox(height: AppSpacing.sm),
               const Divider(height: 1),
               const SizedBox(height: AppSpacing.sm),
               // Date + price
-              Row(children: [
-                const Icon(Icons.calendar_today,
-                    size: 14, color: AppColors.onSurfaceVar),
-                const SizedBox(width: 6),
-                Text(DateFormat('EEE, MMM dd, yyyy').format(booking.startTime),
-                    style: AppTextStyles.bodySmall),
-                const Spacer(),
-                Text(
-                  '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary),
-                ),
-              ]),
-              const SizedBox(height: 4),
-              // Time + slots
-              Row(children: [
-                const Icon(Icons.access_time,
-                    size: 14, color: AppColors.onSurfaceVar),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '${DateFormat('hh:mm a').format(booking.startTime)} – '
-                    '${DateFormat('hh:mm a').format(booking.endTime)}  •  '
-                    '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}',
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: AppColors.onSurfaceVar,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('EEE, MMM dd, yyyy').format(booking.startTime),
                     style: AppTextStyles.bodySmall,
                   ),
-                ),
-              ]),
+                  const Spacer(),
+                  Text(
+                    '₹${(booking.discountedPrice ?? booking.totalPrice).toStringAsFixed(0)}',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Time + slots
+              Row(
+                children: [
+                  const Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: AppColors.onSurfaceVar,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '${DateFormat('hh:mm a').format(booking.startTime)} – '
+                      '${DateFormat('hh:mm a').format(booking.endTime)}  •  '
+                      '${booking.slotIds.length} slot${booking.slotIds.length > 1 ? 's' : ''}',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: AppSpacing.sm),
               const Divider(height: 1),
               const SizedBox(height: AppSpacing.sm),
-              Row(children: [
-                Text('Booking #$shortId',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.onSurfaceVar)),
-                if (booking.couponCode != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.offerBg,
-                      borderRadius: BorderRadius.circular(4),
+              Row(
+                children: [
+                  Text(
+                    'Booking #$shortId',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVar,
                     ),
-                    child: Text(booking.couponCode!,
+                  ),
+                  if (booking.couponCode != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.offerBg,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        booking.couponCode!,
                         style: const TextStyle(
-                            color: AppColors.offer,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold)),
+                          color: AppColors.offer,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  Text(
+                    'View receipt',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.primary,
+                    ),
                   ),
                 ],
-                const Spacer(),
-                Text('View receipt',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.primary)),
-              ]),
+              ),
             ],
           ),
         ),
@@ -700,9 +824,7 @@ class _TournamentsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Tournaments')),
-      body: Center(
-        child: Text('Coming soon!', style: AppTextStyles.bodyLarge),
-      ),
+      body: Center(child: Text('Coming soon!', style: AppTextStyles.bodyLarge)),
     );
   }
 }
@@ -733,8 +855,9 @@ class _ProfileTab extends ConsumerWidget {
                       (user != null && user.name.isNotEmpty)
                           ? user.name[0].toUpperCase()
                           : '?',
-                      style: AppTextStyles.displayLarge
-                          .copyWith(color: AppColors.primary),
+                      style: AppTextStyles.displayLarge.copyWith(
+                        color: AppColors.primary,
+                      ),
                     )
                   : null,
             ),
@@ -746,8 +869,9 @@ class _ProfileTab extends ConsumerWidget {
           Center(
             child: Text(
               user?.email ?? '',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.onSurfaceVar),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.onSurfaceVar,
+              ),
             ),
           ),
           // Active role badge
@@ -761,9 +885,12 @@ class _ProfileTab extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-              child: Text('Switch Mode',
-                  style: AppTextStyles.labelMedium
-                      .copyWith(color: AppColors.onSurfaceVar)),
+              child: Text(
+                'Switch Mode',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.onSurfaceVar,
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             _ModeCard(
@@ -808,29 +935,56 @@ class _ProfileTab extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl),
           const Divider(),
           ListTile(
-            leading: const Icon(Icons.history_outlined,
-                color: AppColors.onSurfaceVar),
+            leading: const Icon(
+              Icons.history_outlined,
+              color: AppColors.onSurfaceVar,
+            ),
             title: Text('My Bookings', style: AppTextStyles.bodyLarge),
-            trailing: const Icon(Icons.chevron_right,
-                color: AppColors.outlineVariant),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.outlineVariant,
+            ),
             onTap: () => context.push('/my-bookings'),
           ),
           ListTile(
-            leading: const Icon(Icons.headset_mic_outlined,
-                color: AppColors.onSurfaceVar),
+            leading: const Icon(
+              Icons.headset_mic_outlined,
+              color: AppColors.onSurfaceVar,
+            ),
             title: Text('Contact Us', style: AppTextStyles.bodyLarge),
-            trailing: const Icon(Icons.chevron_right,
-                color: AppColors.outlineVariant),
+            trailing: const Icon(
+              Icons.chevron_right,
+              color: AppColors.outlineVariant,
+            ),
             onTap: () => context.push('/contact'),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: AppColors.error),
-            title: Text('Sign Out',
-                style: AppTextStyles.bodyLarge.copyWith(color: AppColors.error)),
-            onTap: () =>
-                ref.read(authControllerProvider.notifier).signOut(),
+            title: Text(
+              'Sign Out',
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.error),
+            ),
+            onTap: () => ref.read(authControllerProvider.notifier).signOut(),
           ),
+
+          const SizedBox(height: AppSpacing.xl),
+          // F-01: App version display
+          ref
+              .watch(packageInfoProvider)
+              .when(
+                data: (info) => Center(
+                  child: Text(
+                    'v${info.version} (${info.buildNumber})',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.onSurfaceVar,
+                    ),
+                  ),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+          const SizedBox(height: AppSpacing.lg),
         ],
       ),
     );
@@ -852,7 +1006,9 @@ class _RoleBadge extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: bg.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
@@ -863,9 +1019,13 @@ class _RoleBadge extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: bg),
           const SizedBox(width: 4),
-          Text(label,
-              style: AppTextStyles.labelSmall.copyWith(
-                  color: bg, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: bg,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -899,7 +1059,9 @@ class _ModeCard extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.only(bottom: AppSpacing.sm),
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: isActive ? AppColors.primaryLight : AppColors.surface,
           borderRadius: BorderRadius.circular(12),
@@ -914,36 +1076,38 @@ class _ModeCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.primary
-                    : AppColors.surfaceVariant,
+                color: isActive ? AppColors.primary : AppColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon,
-                  size: 20,
-                  color: isActive ? Colors.white : AppColors.onSurfaceVar),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isActive ? Colors.white : AppColors.onSurfaceVar,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style: AppTextStyles.titleMedium.copyWith(
-                          color: isActive
-                              ? AppColors.primary
-                              : AppColors.onSurface)),
-                  Text(subtitle,
-                      style: AppTextStyles.bodySmall),
+                  Text(
+                    label,
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: isActive ? AppColors.primary : AppColors.onSurface,
+                    ),
+                  ),
+                  Text(subtitle, style: AppTextStyles.bodySmall),
                 ],
               ),
             ),
             if (isActive)
-              const Icon(Icons.check_circle,
-                  color: AppColors.primary, size: 20)
+              const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
             else
-              const Icon(Icons.chevron_right,
-                  color: AppColors.outlineVariant, size: 20),
+              const Icon(
+                Icons.chevron_right,
+                color: AppColors.outlineVariant,
+                size: 20,
+              ),
           ],
         ),
       ),

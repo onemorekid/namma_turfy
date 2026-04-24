@@ -32,8 +32,8 @@ class StarRatingWidget extends StatelessWidget {
             i < fullStars
                 ? Icons.star
                 : (i == fullStars && hasHalf)
-                    ? Icons.star_half
-                    : Icons.star_border,
+                ? Icons.star_half
+                : Icons.star_border,
             size: iconSize,
             color: i < fullStars || (i == fullStars && hasHalf)
                 ? AppColors.star
@@ -50,10 +50,7 @@ class StarRatingWidget extends StatelessWidget {
         ),
         if (reviewCount != null) ...[
           const SizedBox(width: 4),
-          Text(
-            '( $reviewCount Reviews )',
-            style: AppTextStyles.bodySmall,
-          ),
+          Text('( $reviewCount Reviews )', style: AppTextStyles.bodySmall),
         ],
       ],
     );

@@ -31,6 +31,14 @@ class VenueRepositoryImpl implements VenueRepository {
   }
 
   @override
+  Stream<Venue?> watchVenueById(String id) {
+    return _firestore.collection('venues').doc(id).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return VenueModel.fromSnapshot(doc);
+    });
+  }
+
+  @override
   Future<List<Venue>> searchVenues({String? sport, String? location}) async {
     Query query = _firestore.collection('venues');
 
@@ -107,6 +115,21 @@ class VenueRepositoryImpl implements VenueRepository {
       ownerBankName: venue.ownerBankName,
       razorpayContactId: venue.razorpayContactId,
       razorpayFundAccountId: venue.razorpayFundAccountId,
+      openTimeHour: venue.openTimeHour,
+      openTimeMinute: venue.openTimeMinute,
+      closeTimeHour: venue.closeTimeHour,
+      closeTimeMinute: venue.closeTimeMinute,
+      morningPeakStartHour: venue.morningPeakStartHour,
+      morningPeakStartMinute: venue.morningPeakStartMinute,
+      morningPeakEndHour: venue.morningPeakEndHour,
+      morningPeakEndMinute: venue.morningPeakEndMinute,
+      eveningPeakStartHour: venue.eveningPeakStartHour,
+      eveningPeakStartMinute: venue.eveningPeakStartMinute,
+      eveningPeakEndHour: venue.eveningPeakEndHour,
+      eveningPeakEndMinute: venue.eveningPeakEndMinute,
+      peakMultiplier: venue.peakMultiplier,
+      minSlotPrice: venue.minSlotPrice,
+      availableSlotHours: venue.availableSlotHours,
     );
     await _firestore
         .collection('venues')
@@ -137,6 +160,7 @@ class VenueRepositoryImpl implements VenueRepository {
       name: zone.name,
       type: zone.type,
       images: zone.images,
+      capacity: zone.capacity,
     );
     await _firestore
         .collection('zones')
@@ -174,6 +198,21 @@ class VenueRepositoryImpl implements VenueRepository {
   }
 
   @override
+  Future<List<Slot>> getSlotsInRange(
+    String zoneId,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final snapshot = await _firestore
+        .collection('slots')
+        .where('zoneId', isEqualTo: zoneId)
+        .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(end))
+        .get();
+    return snapshot.docs.map((doc) => SlotModel.fromSnapshot(doc)).toList();
+  }
+
+  @override
   Future<void> saveSlot(Slot slot) async {
     debugPrint(
       'Saving slot: ${slot.id} for zone: ${slot.zoneId} at ${slot.startTime}',
@@ -196,6 +235,8 @@ class VenueRepositoryImpl implements VenueRepository {
 
   @override
   Future<void> bulkSaveSlots(List<Slot> slots) async {
+    if (slots.isEmpty) return;
+
     // Firestore batches are capped at 500 operations. Split into chunks.
     const chunkSize = 499;
     for (int i = 0; i < slots.length; i += chunkSize) {
@@ -216,6 +257,63 @@ class VenueRepositoryImpl implements VenueRepository {
       }
       await batch.commit();
     }
+
+    // Trigger recalculation for the first zone's venue (assuming all slots in batch belong to same venue)
+    try {
+      final firstZoneId = slots.first.zoneId;
+      final zoneSnap = await _firestore
+          .collection('zones')
+          .doc(firstZoneId)
+          .get();
+      final venueId = zoneSnap.data()?['venueId'] as String?;
+      if (venueId != null) {
+        await recalculateAvailableHours(venueId);
+      }
+    } catch (e) {
+      debugPrint('Error triggering recalculateAvailableHours: $e');
+    }
+  }
+
+  @override
+  Future<void> recalculateAvailableHours(String venueId) async {
+    // 1. Get all zones for this venue
+    final zonesSnap = await _firestore
+        .collection('zones')
+        .where('venueId', isEqualTo: venueId)
+        .get();
+    final zoneIds = zonesSnap.docs.map((d) => d.id).toList();
+    if (zoneIds.isEmpty) return;
+
+    // 2. Query available slots for TODAY
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final slotsSnap = await _firestore
+        .collection('slots')
+        .where('zoneId', whereIn: zoneIds)
+        .where('status', isEqualTo: 'available')
+        .where(
+          'startTime',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+        )
+        .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .get();
+
+    // 3. Extract unique hours in future
+    final hours =
+        slotsSnap.docs
+            .map((d) => (d.data()['startTime'] as Timestamp).toDate())
+            .where((t) => t.isAfter(now))
+            .map((t) => t.hour)
+            .toSet()
+            .toList()
+          ..sort();
+
+    // 4. Update Venue
+    await _firestore.collection('venues').doc(venueId).update({
+      'availableSlotHours': hours,
+    });
   }
 
   @override
@@ -251,8 +349,9 @@ class VenueRepositoryImpl implements VenueRepository {
       'id': coupon.id,
       'ownerId': coupon.ownerId,
       'code': coupon.code,
-      'discountType':
-          coupon.discountType == DiscountType.flat ? 'flat' : 'percentage',
+      'discountType': coupon.discountType == DiscountType.flat
+          ? 'flat'
+          : 'percentage',
       'discountValue': coupon.discountValue,
       'validTo': coupon.validTo.toIso8601String(),
       'usageLimit': coupon.usageLimit,

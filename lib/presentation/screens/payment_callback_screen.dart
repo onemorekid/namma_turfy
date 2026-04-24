@@ -89,13 +89,13 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
           .authStateChanges()
           .firstWhere((user) => user != null)
           .timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception(
-            'Session restore timed out. Please log in again and check My Bookings.',
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw Exception(
+                'Session restore timed out. Please log in again and check My Bookings.',
+              );
+            },
           );
-        },
-      );
       debugPrint('[Callback] Auth session restored');
     } catch (e) {
       debugPrint('[Callback] Auth restore failed: $e');

@@ -29,6 +29,7 @@ class Slot {
     DateTime? holdExpiry,
     DateTime? endTime,
     String? lockedBy,
+    double? price,
     bool clearLock = false,
   }) {
     return Slot(
@@ -36,7 +37,7 @@ class Slot {
       zoneId: zoneId,
       startTime: startTime,
       endTime: endTime ?? this.endTime,
-      price: price,
+      price: price ?? this.price,
       status: status ?? this.status,
       holdExpiry: clearLock ? null : holdExpiry ?? this.holdExpiry,
       lockedBy: clearLock ? null : lockedBy ?? this.lockedBy,

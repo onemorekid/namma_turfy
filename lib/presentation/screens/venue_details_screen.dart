@@ -1,11 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io' show Platform;
 import 'package:namma_turfy/core/theme/app_colors.dart';
 import 'package:namma_turfy/core/theme/app_spacing.dart';
 import 'package:namma_turfy/core/theme/app_text_styles.dart';
 import 'package:namma_turfy/domain/entities/slot.dart';
+import 'package:namma_turfy/domain/entities/venue.dart';
 import 'package:namma_turfy/domain/entities/zone.dart';
 import 'package:namma_turfy/presentation/providers/auth_providers.dart';
 import 'package:namma_turfy/presentation/providers/booking_providers.dart';
@@ -51,8 +55,9 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
     if (selectedSlots.isEmpty || venue == null) return;
 
     setState(() => _isLocking = true);
-    final locked =
-        await ref.read(bookingRepositoryProvider).lockSlots(selectedSlots, user.id);
+    final locked = await ref
+        .read(bookingRepositoryProvider)
+        .lockSlots(selectedSlots, user.id);
 
     if (!mounted) return;
     setState(() => _isLocking = false);
@@ -67,11 +72,40 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
       ref.read(selectedSlotsProvider.notifier).value = [];
       return;
     }
-    context.go('/checkout', extra: {
-      'venue': venue,
-      'slots': selectedSlots,
-      'lockedByUserId': user.id,
-    });
+    context.go(
+      '/checkout',
+      extra: {
+        'venue': venue,
+        'slots': selectedSlots,
+        'lockedByUserId': user.id,
+      },
+    );
+  }
+
+  Future<void> _openMaps(Venue venue) async {
+    final query = Uri.encodeComponent(venue.location);
+    final lat = venue.latitude;
+    final lng = venue.longitude;
+
+    Uri uri;
+    if (kIsWeb) {
+      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    } else if (Platform.isAndroid) {
+      uri = Uri.parse('geo:$lat,$lng?q=$query');
+    } else if (Platform.isIOS) {
+      uri = Uri.parse('https://maps.apple.com/?q=$query&ll=$lat,$lng');
+    } else {
+      uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    }
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      final fallback = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$query',
+      );
+      await launchUrl(fallback, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -134,16 +168,22 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                               fit: BoxFit.cover,
                               errorWidget: Container(
                                 color: AppColors.surfaceVariant,
-                                child: const Icon(Icons.sports_soccer,
-                                    size: 60, color: AppColors.primary),
+                                child: const Icon(
+                                  Icons.sports_soccer,
+                                  size: 60,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           )
                         : Container(
                             color: AppColors.surfaceVariant,
                             child: const Center(
-                              child: Icon(Icons.stadium,
-                                  size: 64, color: AppColors.primary),
+                              child: Icon(
+                                Icons.stadium,
+                                size: 64,
+                                color: AppColors.primary,
+                              ),
                             ),
                           ),
 
@@ -163,7 +203,9 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white.withValues(
-                                  alpha: _currentImageIndex == e.key ? 0.9 : 0.4,
+                                  alpha: _currentImageIndex == e.key
+                                      ? 0.9
+                                      : 0.4,
                                 ),
                               ),
                             );
@@ -177,7 +219,9 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
               // ── Venue info strip ───────────────────────────────────────────
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
                 decoration: const BoxDecoration(
                   color: AppColors.surface,
                   border: Border(bottom: BorderSide(color: AppColors.outline)),
@@ -190,18 +234,29 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                         children: [
                           Text(venue.name, style: AppTextStyles.titleLarge),
                           const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on,
-                                  size: 14, color: AppColors.onSurfaceVar),
-                              const SizedBox(width: 2),
-                              Expanded(
-                                child: Text(venue.location,
-                                    style: AppTextStyles.bodySmall,
+                          InkWell(
+                            onTap: () => _openMaps(venue),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 2),
+                                Expanded(
+                                  child: Text(
+                                    venue.location,
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primary,
+                                      decoration: TextDecoration.underline,
+                                    ),
                                     maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
-                              ),
-                            ],
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 4),
                           StarRatingWidget(rating: venue.rating, iconSize: 16),
@@ -230,9 +285,13 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
                 data: (zones) => zones.isEmpty
                     ? const SizedBox.shrink()
                     : _ZoneSelector(
-                        zones: zones, selectedZoneId: selectedZoneId),
+                        zones: zones,
+                        selectedZoneId: selectedZoneId,
+                      ),
                 loading: () => const LinearProgressIndicator(
-                    color: AppColors.primary, minHeight: 2),
+                  color: AppColors.primary,
+                  minHeight: 2,
+                ),
                 error: (e, _) => Text('Error: $e'),
               ),
 
@@ -240,20 +299,26 @@ class _VenueDetailsScreenState extends ConsumerState<VenueDetailsScreen> {
 
               // ── Slot list ──────────────────────────────────────────────────
               if (selectedZoneId != null)
-                Expanded(child: _SlotList(zoneId: selectedZoneId))
+                Expanded(
+                  child: _SlotList(zoneId: selectedZoneId, venue: venue),
+                )
               else
                 Expanded(
                   child: Center(
-                    child: Text('Select a zone to see slots',
-                        style: AppTextStyles.bodyMedium
-                            .copyWith(color: AppColors.onSurfaceVar)),
+                    child: Text(
+                      'Select a zone to see slots',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.onSurfaceVar,
+                      ),
+                    ),
                   ),
                 ),
             ],
           );
         },
-        loading: () =>
-            const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
         error: (e, _) => Center(child: Text('Error: $e')),
       ),
       bottomNavigationBar: _StickyFooter(
@@ -278,7 +343,9 @@ class _DatePicker extends ConsumerWidget {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         itemCount: 7,
         itemBuilder: (_, index) {
           final date = DateTime.now().add(Duration(days: index));
@@ -306,9 +373,7 @@ class _DatePicker extends ConsumerWidget {
                   Text(
                     DateFormat('E').format(date),
                     style: AppTextStyles.bodySmall.copyWith(
-                      color: isSelected
-                          ? Colors.white
-                          : AppColors.onSurfaceVar,
+                      color: isSelected ? Colors.white : AppColors.onSurfaceVar,
                       fontSize: 10,
                     ),
                   ),
@@ -353,7 +418,9 @@ class _ZoneSelector extends ConsumerWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         children: zones.map((zone) {
           final isSelected = zone.id == selectedZoneId;
           return Padding(
@@ -383,7 +450,8 @@ class _ZoneSelector extends ConsumerWidget {
 
 class _SlotList extends ConsumerWidget {
   final String zoneId;
-  const _SlotList({required this.zoneId});
+  final Venue venue;
+  const _SlotList({required this.zoneId, required this.venue});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -399,8 +467,9 @@ class _SlotList extends ConsumerWidget {
           return Center(
             child: Text(
               'No slots available for this date.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.onSurfaceVar),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.onSurfaceVar,
+              ),
             ),
           );
         }
@@ -411,23 +480,37 @@ class _SlotList extends ConsumerWidget {
         return ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.md),
           itemCount: sorted.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.sm),
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (_, index) {
             final slot = sorted[index];
             final isSelected = selectedSlots.any((s) => s.id == slot.id);
             final isPast = slot.startTime.isBefore(DateTime.now());
-            final isAvailable =
-                slot.status == SlotStatus.available && !isPast;
+            final isAvailable = slot.status == SlotStatus.available && !isPast;
+
+            bool isPeak = false;
+            final startMinutes =
+                slot.startTime.hour * 60 + slot.startTime.minute;
+            final morningStart =
+                venue.morningPeakStartHour * 60 + venue.morningPeakStartMinute;
+            final morningEnd =
+                venue.morningPeakEndHour * 60 + venue.morningPeakEndMinute;
+            final eveningStart =
+                venue.eveningPeakStartHour * 60 + venue.eveningPeakStartMinute;
+            final eveningEnd =
+                venue.eveningPeakEndHour * 60 + venue.eveningPeakEndMinute;
+
+            if ((startMinutes >= morningStart && startMinutes < morningEnd) ||
+                (startMinutes >= eveningStart && startMinutes < eveningEnd)) {
+              isPeak = true;
+            }
 
             return SlotRowWidget(
               slot: slot,
               isSelected: isSelected,
-              isPeak: slot.price > 300, // heuristic: flag as peak if > ₹300
+              isPeak: isPeak,
               onTap: isAvailable
                   ? () {
-                      final notifier =
-                          ref.read(selectedSlotsProvider.notifier);
+                      final notifier = ref.read(selectedSlotsProvider.notifier);
                       notifier.value = isSelected
                           ? selectedSlots.where((s) => s.id != slot.id).toList()
                           : [...selectedSlots, slot];
@@ -437,8 +520,9 @@ class _SlotList extends ConsumerWidget {
           },
         );
       },
-      loading: () =>
-          const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      ),
       error: (e, _) => Center(child: Text('Error: $e')),
     );
   }
@@ -463,7 +547,11 @@ class _StickyFooter extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.ctaBottom),
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.ctaBottom,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         boxShadow: [
@@ -500,20 +588,28 @@ class _StickyFooter extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   minimumSize: Size.zero,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg, vertical: 0),
+                    horizontal: AppSpacing.lg,
+                    vertical: 0,
+                  ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: isLocking
                     ? const SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                    : Text('Book Now',
-                        style: AppTextStyles.labelLarge
-                            .copyWith(color: Colors.white)),
+                    : Text(
+                        'Book Now',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
               ),
             ),
           ],
