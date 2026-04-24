@@ -33,8 +33,8 @@ export const onSlotStatusChange = functions.firestore
     if (venueZoneIds.length === 0) return null;
 
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.month, now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.month, now.getDate(), 23, 59, 59);
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
     // Fetch available slots for these zones
     // Note: Firestore 'in' query supports up to 30 items. 
